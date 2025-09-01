@@ -5,13 +5,14 @@ import { NoteEditor } from "@/components/note-editor";
 import { ShareModal } from "@/components/share-modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Grid3X3, Grid2X2, List, Circle } from "lucide-react";
+import { Search, Grid3X3, Grid2X2, List, Circle, LogOut, User } from "lucide-react";
 import { useNotes } from "@/hooks/use-notes";
 import type { Note } from "@shared/schema";
 
 export type ViewMode = 'grid' | 'gallery' | 'list';
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>("folder-icloud-notes");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>("provider-icloud");

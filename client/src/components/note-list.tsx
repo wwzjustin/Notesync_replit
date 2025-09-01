@@ -13,6 +13,118 @@ import type { ViewMode } from "@/pages/dashboard";
 
 type NoteWithChildren = Note & { children?: Note[] };
 
+interface ChildNotesProps {
+  notes: NoteWithChildren[];
+  level: number;
+  onNoteSelect?: (note: Note) => void;
+  selectedNote?: Note | null;
+  viewMode?: ViewMode;
+  handleDragStart?: (e: React.DragEvent, noteId: string) => void;
+  handleDragOver?: (e: React.DragEvent, targetId: string) => void;
+  handleDragLeave?: () => void;
+  handleDrop?: (e: React.DragEvent, targetId: string) => void;
+  getNoteCardClass?: (note: Note, isChild?: boolean) => string;
+  formatDate?: (date: Date) => string;
+}
+
+const ChildNotes: React.FC<ChildNotesProps> = ({ 
+  notes, 
+  level, 
+  onNoteSelect,
+  selectedNote,
+  viewMode = 'list',
+  handleDragStart,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  getNoteCardClass,
+  formatDate
+}) => {
+  const maxLevel = 5; // Limit nesting to prevent UI issues
+  if (level > maxLevel) return null;
+  
+  const indentClass = `ml-${level * 4}`; // Increase indentation per level
+  const prefixSymbol = '↳' + '  '.repeat(level - 1); // Visual hierarchy indicator
+  
+  return (
+    <>
+      {notes.map((note) => (
+        <div key={note.id}>
+          <div
+            className={`${getNoteCardClass?.(note, true)} ${indentClass}`}
+            onClick={() => onNoteSelect?.(note)}
+            draggable={true}
+            onDragStart={(e) => handleDragStart?.(e, note.id)}
+            onDragOver={(e) => handleDragOver?.(e, note.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop?.(e, note.id)}
+            data-testid={`note-${note.id}`}
+          >
+            {viewMode === 'list' ? (
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
+                    {prefixSymbol} {note.title}
+                  </h4>
+                  <span className="text-secondary text-xs ml-4 whitespace-nowrap">
+                    {formatDate?.(note.updatedAt || note.createdAt || new Date())}
+                  </span>
+                </div>
+                <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
+                  {note.plainContent || "No content"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
+                    {prefixSymbol} {note.title}
+                  </h4>
+                  <span className="text-secondary text-xs ml-2 whitespace-nowrap">
+                    {formatDate?.(note.updatedAt || note.createdAt || new Date())}
+                  </span>
+                </div>
+                
+                <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
+                  {note.plainContent || "No content"}
+                </p>
+              </>
+            )}
+            
+            <div className="flex items-center justify-between mt-auto">
+              <div className="flex space-x-1">
+                {note.isLocked && (
+                  <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
+                )}
+                {note.hasAttachments && (
+                  <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Recursively render children */}
+          {note.children && note.children.length > 0 && (
+            <ChildNotes 
+              notes={note.children} 
+              level={level + 1}
+              onNoteSelect={onNoteSelect}
+              selectedNote={selectedNote}
+              viewMode={viewMode}
+              handleDragStart={handleDragStart}
+              handleDragOver={handleDragOver}
+              handleDragLeave={handleDragLeave}
+              handleDrop={handleDrop}
+              getNoteCardClass={getNoteCardClass}
+              formatDate={formatDate}
+            />
+          )}
+        </div>
+      ))}
+    </>
+  );
+};
+
 interface NoteListProps {
   width: number;
   onWidthChange: (width: number) => void;
@@ -183,13 +295,18 @@ export function NoteList({
   };
 
   const organizeNotesByHierarchy = (notes: Note[]): NoteWithChildren[] => {
-    const parentNotes = notes.filter(note => !note.parentId);
-    const childNotes = notes.filter(note => note.parentId);
+    // Helper function to recursively build note tree
+    const buildNoteTree = (parentId: string | null): NoteWithChildren[] => {
+      const children = notes.filter(note => note.parentId === parentId);
+      
+      return children.map(note => ({
+        ...note,
+        children: buildNoteTree(note.id)
+      }));
+    };
     
-    return parentNotes.map(parent => ({
-      ...parent,
-      children: childNotes.filter(child => child.parentId === parent.id)
-    }));
+    // Start with root notes (notes without parents)
+    return buildNoteTree(null);
   };
 
   const groupNotesByDate = (notes: Note[]): { [key: string]: NoteWithChildren[] } => {
@@ -370,63 +487,22 @@ export function NoteList({
                       </div>
                     </div>
 
-                    {/* Child Notes */}
-                    {note.children && note.children.map((childNote) => (
-                      <div
-                        key={childNote.id}
-                        className={getNoteCardClass(childNote, true)}
-                        onClick={() => onNoteSelect(childNote)}
-                        draggable={true}
-                        onDragStart={(e) => handleDragStart(e, childNote.id)}
-                        onDragOver={(e) => handleDragOver(e, childNote.id)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, childNote.id)}
-                        data-testid={`note-${childNote.id}`}
-                      >
-                        {viewMode === 'list' ? (
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
-                                ↳ {childNote.title}
-                              </h4>
-                              <span className="text-secondary text-xs ml-4 whitespace-nowrap">
-                                {formatDate(childNote.updatedAt || childNote.createdAt || new Date())}
-                              </span>
-                            </div>
-                            <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
-                              {childNote.plainContent || "No content"}
-                            </p>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex items-start justify-between mb-2">
-                              <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
-                                ↳ {childNote.title}
-                              </h4>
-                              <span className="text-secondary text-xs ml-2 whitespace-nowrap">
-                                {formatDate(childNote.updatedAt || childNote.createdAt || new Date())}
-                              </span>
-                            </div>
-                            
-                            <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
-                              {childNote.plainContent || "No content"}
-                            </p>
-                          </>
-                        )}
-                        
-                        <div className="flex items-center justify-between mt-auto">
-                          <ProviderIcon providerId={childNote.providerId || ''} />
-                          <div className="flex space-x-1">
-                            {childNote.isLocked && (
-                              <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
-                            )}
-                            {childNote.hasAttachments && (
-                              <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                    {/* Render child notes recursively */}
+                    {note.children && (
+                      <ChildNotes 
+                        notes={note.children} 
+                        level={1}
+                        onNoteSelect={onNoteSelect}
+                        selectedNote={selectedNote}
+                        viewMode={viewMode}
+                        handleDragStart={handleDragStart}
+                        handleDragOver={handleDragOver}
+                        handleDragLeave={handleDragLeave}
+                        handleDrop={handleDrop}
+                        getNoteCardClass={getNoteCardClass}
+                        formatDate={formatDate}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

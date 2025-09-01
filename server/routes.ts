@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertProviderSchema, 
   insertFolderSchema, 
@@ -11,6 +12,44 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Provider connections for authenticated users
+  app.get('/api/user/provider-connections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connections = await storage.getProviderConnections(userId);
+      res.json(connections);
+    } catch (error) {
+      console.error("Error fetching provider connections:", error);
+      res.status(500).json({ message: "Failed to fetch provider connections" });
+    }
+  });
+
+  app.post('/api/user/provider-connections', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const connectionData = { ...req.body, userId };
+      const connection = await storage.createProviderConnection(connectionData);
+      res.json(connection);
+    } catch (error) {
+      console.error("Error creating provider connection:", error);
+      res.status(500).json({ message: "Failed to create provider connection" });
+    }
+  });
   // Providers
   app.get("/api/providers", async (req, res) => {
     try {
@@ -164,9 +203,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/notes/:id/hierarchy", async (req, res) => {
     try {
       const { parentId } = req.body;
+      
+      // Calculate the proper level based on parent hierarchy
+      let level = 0;
+      if (parentId) {
+        const parent = await storage.getNote(parentId);
+        if (parent) {
+          level = (parent.level || 0) + 1;
+        }
+      }
+      
       const updates: Partial<Note> = { 
         parentId: parentId || null,
-        level: parentId ? 1 : 0 // Simple 2-level hierarchy for now
+        level
       };
       const updated = await storage.updateNote(req.params.id, updates);
       res.json(updated);
@@ -219,14 +268,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(410).json({ message: "Share link has expired" });
       }
       
-      const note = await storage.getNote(shareLink.noteId);
+      const note = await storage.getNote(shareLink.noteId!);
       if (!note) {
         return res.status(404).json({ message: "Note not found" });
       }
       
       // Increment access count
       await storage.updateShareLink(shareLink.id, { 
-        accessCount: shareLink.accessCount + 1 
+        accessCount: (shareLink.accessCount || 0) + 1 
       });
       
       res.json({
