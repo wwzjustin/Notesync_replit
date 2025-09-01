@@ -166,6 +166,114 @@ export class MemStorage implements IStorage {
     ];
 
     folders.forEach(folder => this.folders.set(folder.id, folder));
+
+    // Create sample notes
+    const notes: Note[] = [
+      {
+        id: "note-delta-skymiles",
+        title: "达美账号",
+        content: "Delta SkyMiles account information and details",
+        plainContent: "Delta SkyMiles\n\n建明: 9975675648\njustinishere@163.com\n\n浩昱:\n9726295950\njustinishere1@163.com\n\n9776273055 童君, 申请了簽证\njustinishere1@163.com\n\nMint Mobile\n建明: justinishere@163.com\n浩昱: justinishere1@163.com",
+        folderId: "folder-icloud-notes",
+        providerId: "provider-icloud",
+        parentId: null,
+        level: 0,
+        isLocked: false,
+        wordCount: 45,
+        characterCount: 280,
+        hasAttachments: false,
+        tags: [],
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      },
+      {
+        id: "note-2025-reading",
+        title: "2025 阅读",
+        content: "Reading list and goals for 2025",
+        plainContent: "Yesterday 9/2025 Monthly Reading Goal\n\n• Finish 'The Art of War'\n• Start 'Digital Minimalism'\n• Complete 'Atomic Habits' notes\n• Review 'The Compound Effect'",
+        folderId: "folder-icloud-notes",
+        providerId: "provider-icloud",
+        parentId: null,
+        level: 0,
+        isLocked: false,
+        wordCount: 28,
+        characterCount: 180,
+        hasAttachments: false,
+        tags: ["reading", "goals"],
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+        updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      },
+      {
+        id: "note-medical-checkup",
+        title: "Annual Medical Checkup",
+        content: "Medical checkup schedule and results",
+        plainContent: "Medical Checkup Schedule\n\n• Blood work: Complete ✓\n• Eye exam: Scheduled for next week\n• Dental cleaning: Due in March\n• Physical therapy follow-up\n\nNotes:\n- Blood pressure normal\n- Cholesterol levels good\n- Vitamin D supplement recommended",
+        folderId: "folder-icloud-medical",
+        providerId: "provider-icloud",
+        parentId: null,
+        level: 0,
+        isLocked: true,
+        wordCount: 48,
+        characterCount: 295,
+        hasAttachments: false,
+        tags: ["health", "medical"],
+        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+        updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+      },
+      {
+        id: "note-cat-adoption",
+        title: "Cat Adoption To-Do List",
+        content: "Preparation list for cat adoption",
+        plainContent: "Cat Adoption Preparation\n\n✓ Research local shelters\n✓ Prepare home environment\n• Buy food and water bowls\n• Get scratching post\n• Set up litter box\n• Buy toys and bed\n• Schedule vet appointment\n• Cat-proof apartment\n\nShelters to visit:\n1. City Animal Shelter\n2. Happy Tails Rescue\n3. Paws & Claws Adoption Center",
+        folderId: "folder-icloud-notes",
+        providerId: "provider-icloud",
+        parentId: null,
+        level: 0,
+        isLocked: false,
+        wordCount: 65,
+        characterCount: 400,
+        hasAttachments: false,
+        tags: ["pets", "todo"],
+        createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
+        updatedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // 12 days ago
+      },
+      {
+        id: "note-tech-stack",
+        title: "New Project Tech Stack",
+        content: "Technology decisions for upcoming project",
+        plainContent: "Project Technology Stack\n\nFrontend:\n• React 18 with TypeScript\n• Tailwind CSS for styling\n• Vite for build tooling\n• React Query for state management\n\nBackend:\n• Node.js with Express\n• PostgreSQL database\n• Drizzle ORM\n• JWT authentication\n\nDeployment:\n• Docker containers\n• GitHub Actions CI/CD\n• AWS or Vercel hosting\n\nConsiderations:\n- Performance optimization\n- Security best practices\n- Scalability planning",
+        folderId: "folder-icloud-tech",
+        providerId: "provider-icloud",
+        parentId: null,
+        level: 0,
+        isLocked: false,
+        wordCount: 78,
+        characterCount: 485,
+        hasAttachments: false,
+        tags: ["programming", "tech", "project"],
+        createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // 8 days ago
+        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      },
+      {
+        id: "note-google-meeting",
+        title: "Team Meeting Notes",
+        content: "Weekly team meeting summary",
+        plainContent: "Weekly Team Meeting - Project Updates\n\n• Sprint planning completed\n• New feature requirements discussed\n• Bug fixes prioritized\n• Code review process improvements\n• Team retrospective scheduled\n\nAction Items:\n- Update documentation\n- Refactor authentication module\n- Prepare demo for stakeholders\n- Schedule client feedback session",
+        folderId: "folder-google-notes",
+        providerId: "provider-google",
+        parentId: null,
+        level: 0,
+        isLocked: false,
+        wordCount: 58,
+        characterCount: 365,
+        hasAttachments: false,
+        tags: ["work", "meeting"],
+        createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
+        updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+      }
+    ];
+
+    notes.forEach(note => this.notes.set(note.id, note));
   }
 
   // Users

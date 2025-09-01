@@ -99,9 +99,9 @@ export function NoteList({
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     const now = new Date();
-    const noteDate = new Date(date);
+    const noteDate = typeof date === 'string' ? new Date(date) : date;
     const diffMs = now.getTime() - noteDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
@@ -128,7 +128,7 @@ export function NoteList({
     const groups: { [key: string]: Note[] } = {};
     
     notes.forEach(note => {
-      const noteDate = new Date(note.updatedAt);
+      const noteDate = typeof note.updatedAt === 'string' ? new Date(note.updatedAt) : note.updatedAt;
       const now = new Date();
       const diffMs = now.getTime() - noteDate.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
