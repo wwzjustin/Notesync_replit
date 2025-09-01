@@ -201,6 +201,8 @@ export class MemStorage implements IStorage {
     const provider: Provider = {
       ...insertProvider,
       id,
+      userId: insertProvider.userId || null,
+      isActive: insertProvider.isActive || null,
       createdAt: new Date(),
     };
     this.providers.set(id, provider);
@@ -237,11 +239,15 @@ export class MemStorage implements IStorage {
   async createFolder(insertFolder: InsertFolder): Promise<Folder> {
     const id = randomUUID();
     const folder: Folder = {
-      ...insertFolder,
       id,
+      name: insertFolder.name,
+      path: insertFolder.path,
       noteCount: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
+      providerId: insertFolder.providerId || null,
+      parentId: insertFolder.parentId || null,
+      level: insertFolder.level || null,
     };
     this.folders.set(id, folder);
     return folder;
@@ -274,7 +280,7 @@ export class MemStorage implements IStorage {
       filtered = filtered.filter(note => note.providerId === providerId);
     }
     
-    return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    return filtered.sort((a, b) => (b.updatedAt || new Date(0)).getTime() - (a.updatedAt || new Date(0)).getTime());
   }
 
   async getNote(id: string): Promise<Note | undefined> {
@@ -308,7 +314,7 @@ export class MemStorage implements IStorage {
       filtered = filtered.filter(note => note.isLocked === filters.locked);
     }
 
-    return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    return filtered.sort((a, b) => (b.updatedAt || new Date(0)).getTime() - (a.updatedAt || new Date(0)).getTime());
   }
 
   async createNote(insertNote: InsertNote): Promise<Note> {
@@ -318,13 +324,21 @@ export class MemStorage implements IStorage {
     const characterCount = plainContent ? plainContent.length : 0;
     
     const note: Note = {
-      ...insertNote,
       id,
+      title: insertNote.title,
+      content: insertNote.content,
       plainContent,
       wordCount,
       characterCount,
       createdAt: new Date(),
       updatedAt: new Date(),
+      providerId: insertNote.providerId || null,
+      parentId: insertNote.parentId || null,
+      level: insertNote.level || null,
+      folderId: insertNote.folderId || null,
+      isLocked: insertNote.isLocked || null,
+      hasAttachments: insertNote.hasAttachments || null,
+      tags: insertNote.tags || null,
     };
     this.notes.set(id, note);
 
@@ -400,6 +414,9 @@ export class MemStorage implements IStorage {
     const shareLink: ShareLink = {
       ...insertShareLink,
       id,
+      noteId: insertShareLink.noteId || null,
+      permissions: insertShareLink.permissions || null,
+      expiresAt: insertShareLink.expiresAt || null,
       accessCount: 0,
       createdAt: new Date(),
     };

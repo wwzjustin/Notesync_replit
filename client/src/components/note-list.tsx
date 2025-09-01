@@ -133,12 +133,12 @@ export function NoteList({
     
     switch (sortBy) {
       case 'dateCreated':
-        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       case 'title':
         return sorted.sort((a, b) => a.title.localeCompare(b.title));
       case 'dateModified':
       default:
-        return sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        return sorted.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
     }
   };
 
@@ -199,6 +199,7 @@ export function NoteList({
     
     sortedNotes.forEach(note => {
       const noteDate = typeof note.updatedAt === 'string' ? new Date(note.updatedAt) : note.updatedAt;
+      if (!noteDate) return;
       const now = new Date();
       const diffMs = now.getTime() - noteDate.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -213,7 +214,7 @@ export function NoteList({
       } else if (diffDays < 30) {
         groupKey = 'Previous 30 Days';
       } else {
-        const monthYear = noteDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const monthYear = noteDate?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || 'Unknown';
         groupKey = monthYear;
       }
 
@@ -330,7 +331,7 @@ export function NoteList({
                               }
                             </h4>
                             <span className="text-secondary text-xs ml-4 whitespace-nowrap">
-                              {formatDate(note.updatedAt)}
+                              {formatDate(note.updatedAt || note.createdAt || new Date())}
                             </span>
                           </div>
                           <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
@@ -346,7 +347,7 @@ export function NoteList({
                               }
                             </h4>
                             <span className="text-secondary text-xs ml-2 whitespace-nowrap">
-                              {formatDate(note.updatedAt)}
+                              {formatDate(note.updatedAt || note.createdAt || new Date())}
                             </span>
                           </div>
                           
@@ -357,7 +358,7 @@ export function NoteList({
                       )}
                       
                       <div className="flex items-center justify-between mt-auto">
-                        <ProviderIcon providerId={note.providerId} />
+                        <ProviderIcon providerId={note.providerId || ''} />
                         <div className="flex space-x-1">
                           {note.isLocked && (
                             <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
@@ -389,7 +390,7 @@ export function NoteList({
                                 ↳ {childNote.title}
                               </h4>
                               <span className="text-secondary text-xs ml-4 whitespace-nowrap">
-                                {formatDate(childNote.updatedAt)}
+                                {formatDate(childNote.updatedAt || childNote.createdAt || new Date())}
                               </span>
                             </div>
                             <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
@@ -403,7 +404,7 @@ export function NoteList({
                                 ↳ {childNote.title}
                               </h4>
                               <span className="text-secondary text-xs ml-2 whitespace-nowrap">
-                                {formatDate(childNote.updatedAt)}
+                                {formatDate(childNote.updatedAt || childNote.createdAt || new Date())}
                               </span>
                             </div>
                             
@@ -414,7 +415,7 @@ export function NoteList({
                         )}
                         
                         <div className="flex items-center justify-between mt-auto">
-                          <ProviderIcon providerId={childNote.providerId} />
+                          <ProviderIcon providerId={childNote.providerId || ''} />
                           <div className="flex space-x-1">
                             {childNote.isLocked && (
                               <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />

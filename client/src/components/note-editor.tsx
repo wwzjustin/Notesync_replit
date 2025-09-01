@@ -55,7 +55,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
     if (note) {
       setTitle(note.title);
       setContent(note.plainContent || '');
-      setIsLocked(note.isLocked);
+      setIsLocked(note.isLocked || false);
     }
   }, [note]);
 
@@ -139,7 +139,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
     );
   }
 
-  const providerInfo = getProviderInfo(note.providerId);
+  const providerInfo = getProviderInfo(note.providerId || '');
   const ProviderIcon = providerInfo.icon;
 
   return (
@@ -151,7 +151,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             {note.title}
           </h1>
           <div className="flex items-center space-x-2 text-secondary text-sm">
-            <span>{formatDate(note.updatedAt)}</span>
+            <span>{formatDate(note.updatedAt || note.createdAt || new Date())}</span>
             <Circle className={cn("h-2 w-2", isAutoSaving ? "text-yellow-500" : "text-green-500")} />
             <span>{isAutoSaving ? "Saving..." : "Auto-saved"}</span>
           </div>
