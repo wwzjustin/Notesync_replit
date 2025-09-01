@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Folder, ChevronDown, ChevronRight } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
+import { Plus, Folder, ChevronDown, ChevronRight, Trash2, MoreHorizontal } from "lucide-react";
 import { Apple } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
 import { Mail } from "lucide-react";
-import { useProviders } from "@/hooks/use-folders";
-import { useFolders } from "@/hooks/use-folders";
+import { useProviders, useFolders, useDeleteFolder } from "@/hooks/use-folders";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -30,12 +46,18 @@ export function Sidebar({
   selectedProviderId,
   onFolderSelect,
 }: SidebarProps) {
-  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(
-    new Set(["provider-icloud", "provider-google", "provider-exchange"])
-  );
+  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set());
 
   const { data: providers = [] } = useProviders();
   const { data: folders = [] } = useFolders();
+  const deleteFolderMutation = useDeleteFolder();
+
+  // Auto-expand all providers when loaded
+  useEffect(() => {
+    if (providers.length > 0) {
+      setExpandedProviders(new Set(providers.map(p => p.id)));
+    }
+  }, [providers]);
 
   const toggleProvider = (providerId: string) => {
     const newExpanded = new Set(expandedProviders);
@@ -120,19 +142,65 @@ export function Sidebar({
                         <div
                           key={folder.id}
                           className={cn(
-                            "folder-item p-2 rounded cursor-pointer flex items-center justify-between",
+                            "folder-item p-2 rounded cursor-pointer flex items-center justify-between group",
                             selectedFolderId === folder.id && selectedProviderId === provider.id
                               ? "bg-accent-blue bg-opacity-20 border border-accent-blue border-opacity-30"
                               : "hover:bg-white hover:bg-opacity-5"
                           )}
-                          onClick={() => onFolderSelect(folder.id, provider.id)}
                           data-testid={`folder-${folder.name.toLowerCase().replace(/\s+/g, '-')}`}
                         >
-                          <div className="flex items-center space-x-2">
+                          <div 
+                            className="flex items-center space-x-2 flex-1"
+                            onClick={() => onFolderSelect(folder.id, provider.id)}
+                          >
                             <Folder className="text-accent-blue h-4 w-4" />
                             <span className="text-white text-sm">{folder.name}</span>
                           </div>
-                          <span className="text-secondary text-xs">{folder.noteCount}</span>
+                          <div className="flex items-center space-x-1">
+                            <span className="text-secondary text-xs">{folder.noteCount}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-white hover:bg-opacity-10"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-32">
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem
+                                      className="text-red-400 focus:text-red-300"
+                                      onSelect={(e) => e.preventDefault()}
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete "{folder.name}"? This will also delete all notes in this folder. This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteFolderMutation.mutate(folder.id)}
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       ))}
                     </div>

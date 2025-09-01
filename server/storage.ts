@@ -7,7 +7,7 @@ import {
   type ProviderConnection, type InsertProviderConnection
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql, isNull } from "drizzle-orm";
 import { users, providers, folders, notes, shareLinks, providerConnections } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -57,19 +57,8 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  private providers: Map<string, Provider>;
-  private folders: Map<string, Folder>;
-  private notes: Map<string, Note>;
-  private shareLinks: Map<string, ShareLink>;
-
   constructor() {
-    this.providers = new Map();
-    this.folders = new Map();
-    this.notes = new Map();
-    this.shareLinks = new Map();
-    
-    // Initialize with sample data on startup
-    this.initializeSampleData();
+    // Database storage - no initialization needed
   }
 
   // Helper method to calculate note hierarchy level
@@ -82,114 +71,6 @@ export class DatabaseStorage implements IStorage {
     return (parent.level || 0) + 1;
   }
 
-  private async initializeSampleData() {
-    try {
-      // Check if providers already exist
-      const existingProviders = await db.select().from(providers);
-      if (existingProviders.length > 0) return;
-
-      // Create sample providers
-      const sampleProviders = [
-        {
-          id: "provider-icloud",
-          name: "iCloud",
-          type: "icloud",
-          userId: null,
-          isActive: true,
-        },
-        {
-          id: "provider-google", 
-          name: "Google",
-          type: "google",
-          userId: null,
-          isActive: true,
-        },
-        {
-          id: "provider-exchange",
-          name: "Exchange", 
-          type: "exchange",
-          userId: null,
-          isActive: true,
-        }
-      ];
-
-      await db.insert(providers).values(sampleProviders);
-
-      // Populate in-memory provider maps for hybrid storage
-      sampleProviders.forEach(provider => {
-        this.providers.set(provider.id, {
-          ...provider,
-          createdAt: new Date()
-        });
-      });
-
-      // Create sample folders
-      const sampleFolders = [
-        {
-          id: "folder-icloud-all",
-          name: "All iCloud",
-          providerId: "provider-icloud",
-          parentId: null,
-          path: "/All iCloud",
-          level: 0,
-        },
-        {
-          id: "folder-icloud-notes", 
-          name: "Notes",
-          providerId: "provider-icloud",
-          parentId: null,
-          path: "/Notes",
-          level: 0,
-        },
-        {
-          id: "folder-icloud-medical",
-          name: "Medical", 
-          providerId: "provider-icloud",
-          parentId: null,
-          path: "/Medical",
-          level: 0,
-        },
-        {
-          id: "folder-icloud-tech",
-          name: "Tech",
-          providerId: "provider-icloud", 
-          parentId: null,
-          path: "/Tech",
-          level: 0,
-        },
-        {
-          id: "folder-google-notes",
-          name: "Notes",
-          providerId: "provider-google",
-          parentId: null, 
-          path: "/Notes",
-          level: 0,
-        },
-        {
-          id: "folder-exchange-notes",
-          name: "Notes",
-          providerId: "provider-exchange",
-          parentId: null,
-          path: "/Notes", 
-          level: 0,
-        },
-      ];
-
-      await db.insert(folders).values(sampleFolders);
-
-      // Populate in-memory folder maps for hybrid storage
-      sampleFolders.forEach(folder => {
-        this.folders.set(folder.id, {
-          ...folder,
-          noteCount: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-      });
-    } catch (error) {
-      console.log("Sample data already exists or initialization failed:", error);
-    }
-  }
 
   // Users
   async getUser(id: string): Promise<User | undefined> {
@@ -287,19 +168,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFoldersByParent(parentId: string | null, providerId?: string): Promise<Folder[]> {
-    let query = db.select().from(folders);
+    let baseQuery = db.select().from(folders);
     
     if (parentId === null) {
-      query = query.where(sql`${folders.parentId} IS NULL`);
+      baseQuery = baseQuery.where(isNull(folders.parentId));
     } else {
-      query = query.where(eq(folders.parentId, parentId));
+      baseQuery = baseQuery.where(eq(folders.parentId, parentId));
     }
     
     if (providerId) {
-      query = query.where(eq(folders.providerId, providerId));
+      baseQuery = baseQuery.where(eq(folders.providerId, providerId));
     }
     
-    return await query;
+    return await baseQuery;
   }
 
   async createFolder(insertFolder: InsertFolder): Promise<Folder> {
@@ -320,22 +201,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteFolder(id: string): Promise<void> {
-    await db.delete(folders).where(eq(folders.id, id));
+    try {
+      // First delete all notes in this folder (including child notes)
+      const folderNotes = await this.getNotes(id);
+      for (const note of folderNotes) {
+        await this.deleteNote(note.id);
+      }
+      
+      // Then recursively delete any child folders
+      const childFolders = await db.select().from(folders).where(eq(folders.parentId, id));
+      for (const childFolder of childFolders) {
+        await this.deleteFolder(childFolder.id);
+      }
+      
+      // Finally, delete the folder itself
+      await db.delete(folders).where(eq(folders.id, id));
+    } catch (error) {
+      console.error(`Error deleting folder ${id}:`, error);
+      throw new Error(`Failed to delete folder: ${error}`);
+    }
   }
 
   // Notes
   async getNotes(folderId?: string, providerId?: string): Promise<Note[]> {
-    let query = db.select().from(notes);
+    let baseQuery = db.select().from(notes);
     
     if (folderId) {
-      query = query.where(eq(notes.folderId, folderId));
+      baseQuery = baseQuery.where(eq(notes.folderId, folderId));
     }
     
     if (providerId) {
-      query = query.where(eq(notes.providerId, providerId));
+      baseQuery = baseQuery.where(eq(notes.providerId, providerId));
     }
     
-    const result = await query;
+    const result = await baseQuery;
     return result.sort((a, b) => (b.updatedAt || new Date(0)).getTime() - (a.updatedAt || new Date(0)).getTime());
   }
 
@@ -346,7 +245,7 @@ export class DatabaseStorage implements IStorage {
 
   async getNotesByParent(parentId: string | null): Promise<Note[]> {
     if (parentId === null) {
-      return await db.select().from(notes).where(sql`${notes.parentId} IS NULL`);
+      return await db.select().from(notes).where(isNull(notes.parentId));
     } else {
       return await db.select().from(notes).where(eq(notes.parentId, parentId));
     }
@@ -354,26 +253,26 @@ export class DatabaseStorage implements IStorage {
 
   async searchNotes(query: string, filters?: { providerId?: string; folderId?: string; locked?: boolean }): Promise<Note[]> {
     const lowerQuery = query.toLowerCase();
-    let dbQuery = db.select().from(notes);
+    let baseQuery = db.select().from(notes);
     
     // Apply text search
-    dbQuery = dbQuery.where(
+    baseQuery = baseQuery.where(
       sql`LOWER(${notes.title}) LIKE ${`%${lowerQuery}%`} OR LOWER(${notes.plainContent}) LIKE ${`%${lowerQuery}%`}`
     );
 
     if (filters?.providerId) {
-      dbQuery = dbQuery.where(eq(notes.providerId, filters.providerId));
+      baseQuery = baseQuery.where(eq(notes.providerId, filters.providerId));
     }
 
     if (filters?.folderId) {
-      dbQuery = dbQuery.where(eq(notes.folderId, filters.folderId));
+      baseQuery = baseQuery.where(eq(notes.folderId, filters.folderId));
     }
 
     if (filters?.locked !== undefined) {
-      dbQuery = dbQuery.where(eq(notes.isLocked, filters.locked));
+      baseQuery = baseQuery.where(eq(notes.isLocked, filters.locked));
     }
 
-    const result = await dbQuery;
+    const result = await baseQuery;
     return result.sort((a, b) => (b.updatedAt || new Date(0)).getTime() - (a.updatedAt || new Date(0)).getTime());
   }
 
@@ -426,16 +325,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteNote(id: string): Promise<void> {
-    const [note] = await db.select().from(notes).where(eq(notes.id, id));
-    if (note?.folderId) {
-      const [folder] = await db.select().from(folders).where(eq(folders.id, note.folderId));
-      if (folder) {
-        await this.updateFolder(note.folderId, { 
-          noteCount: Math.max(0, (folder.noteCount || 0) - 1) 
-        });
+    try {
+      const [note] = await db.select().from(notes).where(eq(notes.id, id));
+      if (!note) return;
+      
+      // First, delete any share links associated with this note
+      await db.delete(shareLinks).where(eq(shareLinks.noteId, id));
+      
+      // Then, recursively delete all child notes
+      const childNotes = await db.select().from(notes).where(eq(notes.parentId, id));
+      for (const child of childNotes) {
+        await this.deleteNote(child.id);
       }
+      
+      // Update folder note count
+      if (note.folderId) {
+        const [folder] = await db.select().from(folders).where(eq(folders.id, note.folderId));
+        if (folder) {
+          await this.updateFolder(note.folderId, { 
+            noteCount: Math.max(0, (folder.noteCount || 0) - 1) 
+          });
+        }
+      }
+      
+      // Finally, delete the note itself
+      await db.delete(notes).where(eq(notes.id, id));
+    } catch (error) {
+      console.error(`Error deleting note ${id}:`, error);
+      throw new Error(`Failed to delete note: ${error}`);
     }
-    await db.delete(notes).where(eq(notes.id, id));
   }
 
   // Share Links

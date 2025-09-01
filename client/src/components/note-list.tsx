@@ -1,11 +1,28 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Lock, Paperclip } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
+import { Plus, Lock, Paperclip, Folder, Trash2, MoreHorizontal } from "lucide-react";
 import { Apple } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
 import { Mail } from "lucide-react";
-import { useCreateNote, useUpdateNoteHierarchy } from "@/hooks/use-notes";
+import { useCreateNote, useUpdateNoteHierarchy, useDeleteNote } from "@/hooks/use-notes";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { Note } from "@shared/schema";
@@ -25,6 +42,7 @@ interface ChildNotesProps {
   handleDrop?: (e: React.DragEvent, targetId: string) => void;
   getNoteCardClass?: (note: Note, isChild?: boolean) => string;
   formatDate?: (date: Date) => string;
+  deleteNoteMutation?: any;
 }
 
 const ChildNotes: React.FC<ChildNotesProps> = ({ 
@@ -38,7 +56,8 @@ const ChildNotes: React.FC<ChildNotesProps> = ({
   handleDragLeave,
   handleDrop,
   getNoteCardClass,
-  formatDate
+  formatDate,
+  deleteNoteMutation
 }) => {
   const maxLevel = 5; // Limit nesting to prevent UI issues
   if (level > maxLevel) return null;
@@ -51,8 +70,7 @@ const ChildNotes: React.FC<ChildNotesProps> = ({
       {notes.map((note) => (
         <div key={note.id}>
           <div
-            className={`${getNoteCardClass?.(note, true)} ${indentClass}`}
-            onClick={() => onNoteSelect?.(note)}
+            className={`${getNoteCardClass?.(note, true)} ${indentClass} group`}
             draggable={true}
             onDragStart={(e) => handleDragStart?.(e, note.id)}
             onDragOver={(e) => handleDragOver?.(e, note.id)}
@@ -60,44 +78,90 @@ const ChildNotes: React.FC<ChildNotesProps> = ({
             onDrop={(e) => handleDrop?.(e, note.id)}
             data-testid={`note-${note.id}`}
           >
-            {viewMode === 'list' ? (
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
-                    {prefixSymbol} {note.title}
-                  </h4>
-                  <span className="text-secondary text-xs ml-4 whitespace-nowrap">
-                    {formatDate?.(note.updatedAt || note.createdAt || new Date())}
-                  </span>
+            <div className="flex-1" onClick={() => onNoteSelect?.(note)}>
+              {viewMode === 'list' ? (
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
+                      {prefixSymbol} {note.title}
+                    </h4>
+                    <span className="text-secondary text-xs ml-4 whitespace-nowrap">
+                      {formatDate?.(note.updatedAt || note.createdAt || new Date())}
+                    </span>
+                  </div>
+                  <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
+                    {note.plainContent || "No content"}
+                  </p>
                 </div>
-                <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
-                  {note.plainContent || "No content"}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
-                    {prefixSymbol} {note.title}
-                  </h4>
-                  <span className="text-secondary text-xs ml-2 whitespace-nowrap">
-                    {formatDate?.(note.updatedAt || note.createdAt || new Date())}
-                  </span>
-                </div>
-                
-                <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
-                  {note.plainContent || "No content"}
-                </p>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
+                      {prefixSymbol} {note.title}
+                    </h4>
+                    <span className="text-secondary text-xs ml-2 whitespace-nowrap">
+                      {formatDate?.(note.updatedAt || note.createdAt || new Date())}
+                    </span>
+                  </div>
+                  
+                  <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
+                    {note.plainContent || "No content"}
+                  </p>
+                </>
+              )}
+            </div>
             
             <div className="flex items-center justify-between mt-auto">
-              <div className="flex space-x-1">
+              <div className="flex items-center space-x-1">
                 {note.isLocked && (
                   <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
                 )}
                 {note.hasAttachments && (
                   <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
+                )}
+                {deleteNoteMutation && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-white hover:bg-opacity-10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreHorizontal className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-32">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem
+                            className="text-red-400 focus:text-red-300"
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            <Trash2 className="h-3 w-3 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{note.title}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteNoteMutation.mutate(note.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             </div>
@@ -117,6 +181,7 @@ const ChildNotes: React.FC<ChildNotesProps> = ({
               handleDrop={handleDrop}
               getNoteCardClass={getNoteCardClass}
               formatDate={formatDate}
+              deleteNoteMutation={deleteNoteMutation}
             />
           )}
         </div>
@@ -136,10 +201,21 @@ interface NoteListProps {
   selectedProviderId: string | null;
 }
 
-const providerIcons = {
-  'provider-icloud': Apple,
-  'provider-google': FaGoogle,
-  'provider-exchange': Mail,
+const getProviderIcon = (providerId: string, providerType?: string) => {
+  // Use type if available, otherwise fallback to ID-based mapping
+  const type = providerType || providerId.split('-')[1]; // extract type from id
+  
+  switch (type) {
+    case 'icloud':
+      return Apple;
+    case 'google':
+      return FaGoogle;
+    case 'exchange':
+    case 'outlook':
+      return Mail;
+    default:
+      return Folder; // Default icon
+  }
 };
 
 export function NoteList({
@@ -156,6 +232,7 @@ export function NoteList({
   const [dragOverNote, setDragOverNote] = useState<string | null>(null);
   const createNoteMutation = useCreateNote();
   const updateHierarchyMutation = useUpdateNoteHierarchy();
+  const deleteNoteMutation = useDeleteNote();
   const { toast } = useToast();
 
   const handleResize = (e: React.MouseEvent) => {
@@ -374,8 +451,8 @@ export function NoteList({
   };
 
   const ProviderIcon = ({ providerId }: { providerId: string }) => {
-    const IconComponent = providerIcons[providerId as keyof typeof providerIcons];
-    return IconComponent ? <IconComponent className="h-3 w-3 text-accent-blue" /> : null;
+    const IconComponent = getProviderIcon(providerId);
+    return <IconComponent className="h-3 w-3 text-accent-blue" />;
   };
 
   const groupedNotes = groupNotesByDate(notes);
@@ -430,8 +507,7 @@ export function NoteList({
                   <div key={note.id}>
                     {/* Parent Note */}
                     <div
-                      className={getNoteCardClass(note)}
-                      onClick={() => onNoteSelect(note)}
+                      className={`${getNoteCardClass(note)} group`}
                       draggable={true}
                       onDragStart={(e) => handleDragStart(e, note.id)}
                       onDragOver={(e) => handleDragOver(e, note.id)}
@@ -439,50 +515,94 @@ export function NoteList({
                       onDrop={(e) => handleDrop(e, note.id)}
                       data-testid={`note-${note.id}`}
                     >
-                      {viewMode === 'list' ? (
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
-                              {note.title} {note.children && note.children.length > 0 && 
-                                <span className="text-xs text-gray-400 ml-1">({note.children.length})</span>
-                              }
-                            </h4>
-                            <span className="text-secondary text-xs ml-4 whitespace-nowrap">
-                              {formatDate(note.updatedAt || note.createdAt || new Date())}
-                            </span>
+                      <div className="flex-1" onClick={() => onNoteSelect(note)}>
+                        {viewMode === 'list' ? (
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
+                                {note.title} {note.children && note.children.length > 0 && 
+                                  <span className="text-xs text-gray-400 ml-1">({note.children.length})</span>
+                                }
+                              </h4>
+                              <span className="text-secondary text-xs ml-4 whitespace-nowrap">
+                                {formatDate(note.updatedAt || note.createdAt || new Date())}
+                              </span>
+                            </div>
+                            <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
+                              {note.plainContent || "No content"}
+                            </p>
                           </div>
-                          <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
-                            {note.plainContent || "No content"}
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
-                              {note.title} {note.children && note.children.length > 0 && 
-                                <span className="text-xs text-gray-400 ml-1">({note.children.length})</span>
-                              }
-                            </h4>
-                            <span className="text-secondary text-xs ml-2 whitespace-nowrap">
-                              {formatDate(note.updatedAt || note.createdAt || new Date())}
-                            </span>
-                          </div>
-                          
-                          <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
-                            {note.plainContent || "No content"}
-                          </p>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
+                                {note.title} {note.children && note.children.length > 0 && 
+                                  <span className="text-xs text-gray-400 ml-1">({note.children.length})</span>
+                                }
+                              </h4>
+                              <span className="text-secondary text-xs ml-2 whitespace-nowrap">
+                                {formatDate(note.updatedAt || note.createdAt || new Date())}
+                              </span>
+                            </div>
+                            
+                            <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
+                              {note.plainContent || "No content"}
+                            </p>
+                          </>
+                        )}
+                      </div>
                       
                       <div className="flex items-center justify-between mt-auto">
                         <ProviderIcon providerId={note.providerId || ''} />
-                        <div className="flex space-x-1">
+                        <div className="flex items-center space-x-1">
                           {note.isLocked && (
                             <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
                           )}
                           {note.hasAttachments && (
                             <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
                           )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-white hover:bg-opacity-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-32">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem
+                                    className="text-red-400 focus:text-red-300"
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{note.title}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteNoteMutation.mutate(note.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>
@@ -501,6 +621,7 @@ export function NoteList({
                         handleDrop={handleDrop}
                         getNoteCardClass={getNoteCardClass}
                         formatDate={formatDate}
+                        deleteNoteMutation={deleteNoteMutation}
                       />
                     )}
                   </div>

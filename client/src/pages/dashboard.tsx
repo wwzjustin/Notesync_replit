@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Grid3X3, Grid2X2, List, Circle, LogOut, User } from "lucide-react";
 import { useNotes } from "@/hooks/use-notes";
+import { useAuth } from "@/hooks/useAuth";
+import { useProviders, useFolders } from "@/hooks/use-folders";
 import type { Note } from "@shared/schema";
 
 export type ViewMode = 'grid' | 'gallery' | 'list';
@@ -14,15 +16,33 @@ export type ViewMode = 'grid' | 'gallery' | 'list';
 export default function Dashboard() {
   const { user } = useAuth();
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>("folder-icloud-notes");
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>("provider-icloud");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const [noteListWidth, setNoteListWidth] = useState(320);
 
+  // Fetch providers and folders
+  const { data: providers = [] } = useProviders();
+  const { data: folders = [] } = useFolders(selectedProviderId || undefined);
   const { data: notes = [] } = useNotes(selectedFolderId, selectedProviderId, searchQuery);
+
+  // Auto-select first available provider and folder
+  useEffect(() => {
+    if (providers.length > 0 && !selectedProviderId) {
+      const firstProvider = providers[0];
+      setSelectedProviderId(firstProvider.id);
+    }
+  }, [providers, selectedProviderId]);
+
+  useEffect(() => {
+    if (folders.length > 0 && selectedProviderId && !selectedFolderId) {
+      const firstFolder = folders[0];
+      setSelectedFolderId(firstFolder.id);
+    }
+  }, [folders, selectedProviderId, selectedFolderId]);
 
   // Auto-select first note when folder changes
   useEffect(() => {
@@ -30,6 +50,32 @@ export default function Dashboard() {
       setSelectedNote(notes[0]);
     }
   }, [notes, selectedNote]);
+
+  // Handle edge case when selected note is deleted
+  useEffect(() => {
+    if (selectedNote && notes.length > 0) {
+      const noteExists = notes.some(note => note.id === selectedNote.id);
+      if (!noteExists) {
+        setSelectedNote(notes[0] || null);
+      }
+    } else if (selectedNote && notes.length === 0) {
+      setSelectedNote(null);
+    }
+  }, [notes, selectedNote]);
+
+  // Handle edge case when selected folder is deleted
+  useEffect(() => {
+    if (selectedFolderId && folders.length > 0) {
+      const folderExists = folders.some(folder => folder.id === selectedFolderId);
+      if (!folderExists) {
+        setSelectedFolderId(folders[0]?.id || null);
+        setSelectedNote(null);
+      }
+    } else if (selectedFolderId && folders.length === 0) {
+      setSelectedFolderId(null);
+      setSelectedNote(null);
+    }
+  }, [folders, selectedFolderId]);
 
   const handleNoteSelect = (note: Note) => {
     setSelectedNote(note);

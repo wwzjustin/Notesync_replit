@@ -31,10 +31,20 @@ interface NoteEditorProps {
   onNoteUpdate: (note: Note) => void;
 }
 
-const providerIcons = {
-  'provider-icloud': { icon: Apple, name: 'iCloud' },
-  'provider-google': { icon: FaGoogle, name: 'Google' },
-  'provider-exchange': { icon: Mail, name: 'Exchange' },
+const getProviderInfo = (providerId: string, providerType?: string) => {
+  const type = providerType || providerId.split('-')[1];
+  
+  switch (type) {
+    case 'icloud':
+      return { icon: Apple, name: 'iCloud' };
+    case 'google':
+      return { icon: FaGoogle, name: 'Google' };
+    case 'exchange':
+    case 'outlook':
+      return { icon: Mail, name: 'Exchange' };
+    default:
+      return { icon: Mail, name: 'Unknown' };
+  }
 };
 
 export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
@@ -123,10 +133,6 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
     });
   };
 
-  const getProviderInfo = (providerId: string) => {
-    const provider = providerIcons[providerId as keyof typeof providerIcons];
-    return provider || { icon: Apple, name: 'Unknown' };
-  };
 
   if (!note) {
     return (

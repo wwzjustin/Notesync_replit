@@ -23,19 +23,19 @@ Preferred communication style: Simple, everyday language.
 - **Language**: TypeScript with ES modules
 - **API Design**: RESTful API with structured error handling and logging middleware
 - **Development**: Hot reload with Vite integration in development mode
-- **Storage Layer**: Abstracted storage interface with in-memory implementation for development
+- **Storage Layer**: PostgreSQL database with full CRUD operations
 
 ### Data Storage
 - **Database**: PostgreSQL with Neon serverless driver
 - **ORM**: Drizzle ORM for type-safe database operations
 - **Schema**: Hierarchical structure supporting providers, folders, notes, and share links
 - **Migrations**: Drizzle Kit for schema management and migrations
-- **Local Storage**: Client-side persistence utilities for offline functionality
+- **Production Database**: Full PostgreSQL database with Neon serverless driver
 
 ### Authentication and Authorization
-- **Mock Authentication**: Simulated OAuth flows for iCloud, Google, and Exchange
-- **Session Management**: Local storage-based authentication state
-- **Guest Mode**: Available for demo purposes without provider integration
+- **Replit OAuth**: Full OpenID Connect authentication with Replit
+- **Session Management**: PostgreSQL-backed sessions with connect-pg-simple
+- **User Management**: Real user profiles stored in database
 
 ### Key Design Patterns
 - **Separation of Concerns**: Clear separation between client, server, and shared code

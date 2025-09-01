@@ -56,7 +56,7 @@ export function ShareModal({ note, onClose }: ShareModalProps) {
   };
 
   const handleSendEmail = () => {
-    // Mock email integration
+    // Email integration would be implemented here
     toast({
       title: "Email sent",
       description: "Note shared via email successfully",
@@ -65,7 +65,7 @@ export function ShareModal({ note, onClose }: ShareModalProps) {
   };
 
   const handleExportPDF = () => {
-    // Mock PDF export
+    // PDF export would be implemented here
     toast({
       title: "PDF exported",
       description: "Note exported as PDF successfully",
