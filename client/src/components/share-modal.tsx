@@ -27,9 +27,12 @@ export function ShareModal({ note, onClose }: ShareModalProps) {
           expiresIn === '1week' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) :
           expiresIn === '1month' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
         
+        const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const shareUrl = `${window.location.origin}/shared/${note.id}/${token}`;
+        
         const linkData = await createShareLinkMutation.mutateAsync({
           noteId: note.id,
-          url: `${window.location.origin}/shared/${note.id}/${Math.random().toString(36).substring(7)}`,
+          url: shareUrl,
           permissions: 'view',
           expiresAt: expirationDate,
         });

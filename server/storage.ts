@@ -41,6 +41,7 @@ export interface IStorage {
   getShareLinkByUrl(url: string): Promise<ShareLink | undefined>;
   getShareLinksByNote(noteId: string): Promise<ShareLink[]>;
   createShareLink(shareLink: InsertShareLink): Promise<ShareLink>;
+  updateShareLink(id: string, updates: Partial<ShareLink>): Promise<ShareLink>;
   deleteShareLink(id: string): Promise<void>;
 }
 
@@ -404,6 +405,20 @@ export class MemStorage implements IStorage {
     };
     this.shareLinks.set(id, shareLink);
     return shareLink;
+  }
+
+  async updateShareLink(id: string, updates: Partial<ShareLink>): Promise<ShareLink> {
+    const shareLink = this.shareLinks.get(id);
+    if (!shareLink) {
+      throw new Error(`ShareLink with id ${id} not found`);
+    }
+
+    const updatedShareLink = { 
+      ...shareLink, 
+      ...updates
+    };
+    this.shareLinks.set(id, updatedShareLink);
+    return updatedShareLink;
   }
 
   async deleteShareLink(id: string): Promise<void> {

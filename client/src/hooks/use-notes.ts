@@ -73,3 +73,17 @@ export function useDeleteNote() {
     },
   });
 }
+
+export function useUpdateNoteHierarchy() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, parentId }: { id: string; parentId: string | null }) => {
+      const response = await apiRequest('PUT', `/api/notes/${id}/hierarchy`, { parentId });
+      return response.json() as Promise<Note>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notes'] });
+    },
+  });
+}

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Welcome from "@/pages/welcome";
 import Dashboard from "@/pages/dashboard";
+import SharedNote from "@/pages/shared-note";
 import { useState, useEffect } from "react";
 
 function Router() {
@@ -29,14 +30,27 @@ function Router() {
     setIsAuthenticated(true);
   };
 
-  if (!isAuthenticated) {
-    return <Welcome onAuth={handleAuth} onGuest={handleGuest} />;
-  }
-
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route component={Dashboard} />
+      {/* Public shared note route - no authentication required */}
+      <Route path="/shared/:noteId/:token" component={SharedNote} />
+      
+      {/* Protected routes */}
+      <Route path="/">
+        {isAuthenticated ? (
+          <Dashboard />
+        ) : (
+          <Welcome onAuth={handleAuth} onGuest={handleGuest} />
+        )}
+      </Route>
+      
+      <Route>
+        {isAuthenticated ? (
+          <Dashboard />
+        ) : (
+          <Welcome onAuth={handleAuth} onGuest={handleGuest} />
+        )}
+      </Route>
     </Switch>
   );
 }

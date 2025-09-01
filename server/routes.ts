@@ -5,7 +5,8 @@ import {
   insertProviderSchema, 
   insertFolderSchema, 
   insertNoteSchema, 
-  insertShareLinkSchema 
+  insertShareLinkSchema,
+  type Note
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -159,6 +160,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update note hierarchy (parent-child relationships)
+  app.put("/api/notes/:id/hierarchy", async (req, res) => {
+    try {
+      const { parentId } = req.body;
+      const updates: Partial<Note> = { 
+        parentId: parentId || null,
+        level: parentId ? 1 : 0 // Simple 2-level hierarchy for now
+      };
+      const updated = await storage.updateNote(req.params.id, updates);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update note hierarchy" });
+    }
+  });
+
   // Share Links
   app.get("/api/share-links/note/:noteId", async (req, res) => {
     try {
@@ -185,6 +201,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete share link" });
+    }
+  });
+
+  // Public shared note access
+  app.get("/shared/:noteId/:token", async (req, res) => {
+    try {
+      const { noteId, token } = req.params;
+      const shareUrl = `${req.protocol}://${req.get('host')}/shared/${noteId}/${token}`;
+      const shareLink = await storage.getShareLinkByUrl(shareUrl);
+      
+      if (!shareLink) {
+        return res.status(404).json({ message: "Share link not found" });
+      }
+      
+      if (shareLink.expiresAt && new Date() > new Date(shareLink.expiresAt)) {
+        return res.status(410).json({ message: "Share link has expired" });
+      }
+      
+      const note = await storage.getNote(shareLink.noteId);
+      if (!note) {
+        return res.status(404).json({ message: "Note not found" });
+      }
+      
+      // Increment access count
+      await storage.updateShareLink(shareLink.id, { 
+        accessCount: shareLink.accessCount + 1 
+      });
+      
+      res.json({
+        note: {
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          plainContent: note.plainContent,
+          createdAt: note.createdAt,
+          updatedAt: note.updatedAt,
+          wordCount: note.wordCount,
+          characterCount: note.characterCount,
+        },
+        shareLink: {
+          permissions: shareLink.permissions,
+          expiresAt: shareLink.expiresAt,
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to access shared note" });
     }
   });
 

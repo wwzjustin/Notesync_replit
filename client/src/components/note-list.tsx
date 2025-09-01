@@ -5,11 +5,13 @@ import { Plus, Lock, Paperclip } from "lucide-react";
 import { Apple } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
 import { Mail } from "lucide-react";
-import { useCreateNote } from "@/hooks/use-notes";
+import { useCreateNote, useUpdateNoteHierarchy } from "@/hooks/use-notes";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { Note } from "@shared/schema";
 import type { ViewMode } from "@/pages/dashboard";
+
+type NoteWithChildren = Note & { children?: Note[] };
 
 interface NoteListProps {
   width: number;
@@ -39,7 +41,9 @@ export function NoteList({
   selectedProviderId,
 }: NoteListProps) {
   const [sortBy, setSortBy] = useState('dateModified');
+  const [dragOverNote, setDragOverNote] = useState<string | null>(null);
   const createNoteMutation = useCreateNote();
+  const updateHierarchyMutation = useUpdateNoteHierarchy();
   const { toast } = useToast();
 
   const handleResize = (e: React.MouseEvent) => {
@@ -138,9 +142,60 @@ export function NoteList({
     }
   };
 
-  const groupNotesByDate = (notes: Note[]) => {
-    const sortedNotes = sortNotes(notes, sortBy);
-    const groups: { [key: string]: Note[] } = {};
+  const handleDragStart = (e: React.DragEvent, noteId: string) => {
+    e.dataTransfer.setData('text/plain', noteId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, noteId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverNote(noteId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverNote(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetNoteId: string) => {
+    e.preventDefault();
+    const draggedNoteId = e.dataTransfer.getData('text/plain');
+    setDragOverNote(null);
+    
+    if (draggedNoteId !== targetNoteId) {
+      try {
+        await updateHierarchyMutation.mutateAsync({
+          id: draggedNoteId,
+          parentId: targetNoteId,
+        });
+        toast({
+          title: "Success",
+          description: "Note hierarchy updated",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update note hierarchy",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const organizeNotesByHierarchy = (notes: Note[]): NoteWithChildren[] => {
+    const parentNotes = notes.filter(note => !note.parentId);
+    const childNotes = notes.filter(note => note.parentId);
+    
+    return parentNotes.map(parent => ({
+      ...parent,
+      children: childNotes.filter(child => child.parentId === parent.id)
+    }));
+  };
+
+  const groupNotesByDate = (notes: Note[]): { [key: string]: NoteWithChildren[] } => {
+    const hierarchicalNotes = organizeNotesByHierarchy(notes);
+    const sortedNotes = sortNotes(hierarchicalNotes, sortBy);
+    const groups: { [key: string]: NoteWithChildren[] } = {};
     
     sortedNotes.forEach(note => {
       const noteDate = typeof note.updatedAt === 'string' ? new Date(note.updatedAt) : note.updatedAt;
@@ -174,7 +229,7 @@ export function NoteList({
   const getNoteGridClass = () => {
     switch (viewMode) {
       case 'grid':
-        return 'grid grid-cols-2 gap-4';
+        return 'grid grid-cols-2 gap-3 auto-rows-max';
       case 'gallery':
         return 'grid grid-cols-1 gap-3';
       case 'list':
@@ -183,18 +238,20 @@ export function NoteList({
     }
   };
 
-  const getNoteCardClass = (note: Note) => {
+  const getNoteCardClass = (note: Note, isChild = false) => {
     const baseClass = "note-item cursor-pointer rounded-lg border transition-all duration-200";
     const selectedClass = selectedNote?.id === note.id
       ? "bg-accent-blue bg-opacity-20 border-accent-blue border-opacity-50"
       : "hover:bg-gray-700 hover:bg-opacity-30 border-gray-600";
+    const dragOverClass = dragOverNote === note.id ? "border-accent-blue border-2" : "";
+    const childClass = isChild ? "ml-4 border-l-2 border-gray-600 border-opacity-50" : "";
     
     if (viewMode === 'grid') {
-      return `${baseClass} ${selectedClass} p-4 h-32 flex flex-col justify-between`;
+      return `${baseClass} ${selectedClass} ${dragOverClass} ${childClass} p-4 min-h-[128px] flex flex-col justify-between`;
     } else if (viewMode === 'gallery') {
-      return `${baseClass} ${selectedClass} p-4 h-24`;
+      return `${baseClass} ${selectedClass} ${dragOverClass} ${childClass} p-4 min-h-[96px] flex flex-col justify-between`;
     } else {
-      return `${baseClass} ${selectedClass} p-3`;
+      return `${baseClass} ${selectedClass} ${dragOverClass} ${childClass} p-3 flex items-center justify-between`;
     }
   };
 
@@ -252,47 +309,123 @@ export function NoteList({
               
               <div className={getNoteGridClass()}>
                 {groupNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    className={getNoteCardClass(note)}
-                    onClick={() => onNoteSelect(note)}
-                    draggable={true}
-                    onDragStart={(e) => e.dataTransfer.setData('text/plain', note.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedNoteId = e.dataTransfer.getData('text/plain');
-                      if (draggedNoteId !== note.id) {
-                        // TODO: Implement parent-child relationship
-                        console.log(`Making note ${draggedNoteId} a child of ${note.id}`);
-                      }
-                    }}
-                    data-testid={`note-${note.id}`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
-                        {note.title}
-                      </h4>
-                      <span className="text-secondary text-xs ml-2 whitespace-nowrap">
-                        {formatDate(note.updatedAt)}
-                      </span>
-                    </div>
-                    
-                    <p className="text-secondary text-xs note-preview mb-2">
-                      {note.plainContent || "No content"}
-                    </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <ProviderIcon providerId={note.providerId} />
-                      <div className="flex space-x-1">
-                        {note.isLocked && (
-                          <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
-                        )}
-                        {note.hasAttachments && (
-                          <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
-                        )}
+                  <div key={note.id}>
+                    {/* Parent Note */}
+                    <div
+                      className={getNoteCardClass(note)}
+                      onClick={() => onNoteSelect(note)}
+                      draggable={true}
+                      onDragStart={(e) => handleDragStart(e, note.id)}
+                      onDragOver={(e) => handleDragOver(e, note.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, note.id)}
+                      data-testid={`note-${note.id}`}
+                    >
+                      {viewMode === 'list' ? (
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
+                              {note.title} {note.children && note.children.length > 0 && 
+                                <span className="text-xs text-gray-400 ml-1">({note.children.length})</span>
+                              }
+                            </h4>
+                            <span className="text-secondary text-xs ml-4 whitespace-nowrap">
+                              {formatDate(note.updatedAt)}
+                            </span>
+                          </div>
+                          <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
+                            {note.plainContent || "No content"}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
+                              {note.title} {note.children && note.children.length > 0 && 
+                                <span className="text-xs text-gray-400 ml-1">({note.children.length})</span>
+                              }
+                            </h4>
+                            <span className="text-secondary text-xs ml-2 whitespace-nowrap">
+                              {formatDate(note.updatedAt)}
+                            </span>
+                          </div>
+                          
+                          <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
+                            {note.plainContent || "No content"}
+                          </p>
+                        </>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-auto">
+                        <ProviderIcon providerId={note.providerId} />
+                        <div className="flex space-x-1">
+                          {note.isLocked && (
+                            <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
+                          )}
+                          {note.hasAttachments && (
+                            <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Child Notes */}
+                    {note.children && note.children.map((childNote) => (
+                      <div
+                        key={childNote.id}
+                        className={getNoteCardClass(childNote, true)}
+                        onClick={() => onNoteSelect(childNote)}
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, childNote.id)}
+                        onDragOver={(e) => handleDragOver(e, childNote.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, childNote.id)}
+                        data-testid={`note-${childNote.id}`}
+                      >
+                        {viewMode === 'list' ? (
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-white font-medium text-sm line-clamp-1 flex-1">
+                                ↳ {childNote.title}
+                              </h4>
+                              <span className="text-secondary text-xs ml-4 whitespace-nowrap">
+                                {formatDate(childNote.updatedAt)}
+                              </span>
+                            </div>
+                            <p className="text-secondary text-xs note-preview mt-1 line-clamp-1">
+                              {childNote.plainContent || "No content"}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
+                                ↳ {childNote.title}
+                              </h4>
+                              <span className="text-secondary text-xs ml-2 whitespace-nowrap">
+                                {formatDate(childNote.updatedAt)}
+                              </span>
+                            </div>
+                            
+                            <p className="text-secondary text-xs note-preview mb-2 line-clamp-3 flex-1">
+                              {childNote.plainContent || "No content"}
+                            </p>
+                          </>
+                        )}
+                        
+                        <div className="flex items-center justify-between mt-auto">
+                          <ProviderIcon providerId={childNote.providerId} />
+                          <div className="flex space-x-1">
+                            {childNote.isLocked && (
+                              <Lock className="h-3 w-3 text-secondary" data-testid="icon-note-locked" />
+                            )}
+                            {childNote.hasAttachments && (
+                              <Paperclip className="h-3 w-3 text-secondary" data-testid="icon-note-attachment" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

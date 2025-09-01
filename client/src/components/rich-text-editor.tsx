@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { cn } from "@/lib/utils";
 
 export interface RichTextEditorRef {
@@ -15,7 +15,7 @@ interface RichTextEditorProps {
   selectedFontSize: string;
 }
 
-export function RichTextEditor({
+export const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(({
   title,
   content,
   onTitleChange,
@@ -23,7 +23,7 @@ export function RichTextEditor({
   isLocked,
   selectedFont,
   selectedFontSize,
-}: RichTextEditorProps) {
+}, ref) => {
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -50,6 +50,10 @@ export function RichTextEditor({
     document.execCommand(command, false, value);
     handleContentChange();
   };
+
+  useImperativeHandle(ref, () => ({
+    handleFormat,
+  }));
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isLocked) {
@@ -125,4 +129,4 @@ export function RichTextEditor({
       )}
     </div>
   );
-}
+});

@@ -46,7 +46,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
   const [selectedFontSize, setSelectedFontSize] = useState('14px');
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<RichTextEditorRef>(null);
 
   const updateNoteMutation = useUpdateNote();
   const { toast } = useToast();
@@ -225,8 +225,8 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             size="sm" 
             className="toolbar-button p-2 text-white hover:bg-gray-700"
             onClick={() => {
-              if (editorRef.current && (editorRef.current as any).formatHandler) {
-                (editorRef.current as any).formatHandler('bold');
+              if (editorRef.current) {
+                editorRef.current.handleFormat('bold');
               }
             }}
           >
@@ -237,8 +237,8 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             size="sm" 
             className="toolbar-button p-2 text-white hover:bg-gray-700"
             onClick={() => {
-              if (editorRef.current && (editorRef.current as any).formatHandler) {
-                (editorRef.current as any).formatHandler('italic');
+              if (editorRef.current) {
+                editorRef.current.handleFormat('italic');
               }
             }}
           >
@@ -249,8 +249,8 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             size="sm" 
             className="toolbar-button p-2 text-white hover:bg-gray-700"
             onClick={() => {
-              if (editorRef.current && (editorRef.current as any).formatHandler) {
-                (editorRef.current as any).formatHandler('underline');
+              if (editorRef.current) {
+                editorRef.current.handleFormat('underline');
               }
             }}
           >
@@ -266,8 +266,8 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             size="sm" 
             className="toolbar-button p-2 text-white hover:bg-gray-700"
             onClick={() => {
-              if (editorRef.current && (editorRef.current as any).formatHandler) {
-                (editorRef.current as any).formatHandler('insertUnorderedList');
+              if (editorRef.current) {
+                editorRef.current.handleFormat('insertUnorderedList');
               }
             }}
           >
@@ -278,8 +278,8 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             size="sm" 
             className="toolbar-button p-2 text-white hover:bg-gray-700"
             onClick={() => {
-              if (editorRef.current && (editorRef.current as any).formatHandler) {
-                (editorRef.current as any).formatHandler('insertOrderedList');
+              if (editorRef.current) {
+                editorRef.current.handleFormat('insertOrderedList');
               }
             }}
           >
@@ -291,12 +291,12 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
             className="toolbar-button p-2 text-white hover:bg-gray-700"
             onClick={() => {
               const url = prompt('Enter link URL:');
-              if (url && editorRef.current && (editorRef.current as any).formatHandler) {
-                (editorRef.current as any).formatHandler('createLink', url);
+              if (url && editorRef.current) {
+                editorRef.current.handleFormat('createLink', url);
               }
             }}
           >
-            <Table className="h-4 w-4" />
+            <Link className="h-4 w-4" />
           </Button>
         </div>
         
@@ -314,8 +314,9 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
       
       {/* Editor Content */}
       <div className="flex-1 p-6 overflow-y-auto">
-        <div ref={editorRef}>
+        <div>
           <RichTextEditor
+            ref={editorRef}
             title={title}
             content={content}
             onTitleChange={setTitle}
