@@ -85,6 +85,7 @@ export default function Dashboard() {
     setSelectedFolderId(folderId);
     setSelectedProviderId(providerId);
     setSelectedNote(null);
+    setSearchQuery(''); // Clear search when switching folders
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
