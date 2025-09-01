@@ -22,7 +22,7 @@ import { Plus, Folder, ChevronDown, ChevronRight, Trash2, MoreHorizontal } from 
 import { Apple } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
 import { Mail } from "lucide-react";
-import { useProviders, useFolders, useDeleteFolder } from "@/hooks/use-folders";
+import { useProviders, useFolders, useDeleteFolder, useCreateFolder } from "@/hooks/use-folders";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -51,6 +51,7 @@ export function Sidebar({
   const { data: providers = [] } = useProviders();
   const { data: folders = [] } = useFolders();
   const deleteFolderMutation = useDeleteFolder();
+  const createFolderMutation = useCreateFolder();
 
   // Auto-expand all providers when loaded
   useEffect(() => {
@@ -89,9 +90,20 @@ export function Sidebar({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const createNewFolder = () => {
-    // TODO: Implement folder creation
+  const createNewFolder = (providerId: string) => {
     console.log('Creating new folder...');
+    const newFolderName = prompt('Enter folder name:');
+    if (newFolderName && newFolderName.trim()) {
+      createFolderMutation.mutate({
+        id: `folder-${providerId}-${Date.now()}`,
+        name: newFolderName.trim(),
+        providerId: providerId,
+        path: newFolderName.trim(),
+        parentId: null,
+        level: 0,
+        noteCount: 0,
+      });
+    }
   };
 
   return (
@@ -128,7 +140,7 @@ export function Sidebar({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={createNewFolder}
+                      onClick={() => createNewFolder(provider.id)}
                       className="h-auto p-1 text-accent-blue hover:text-blue-400"
                       data-testid={`button-new-folder-${provider.type}`}
                     >
