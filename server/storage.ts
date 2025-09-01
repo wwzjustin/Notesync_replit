@@ -1,14 +1,12 @@
 import { 
   type User, type InsertUser, type UpsertUser,
-  type Provider, type InsertProvider,
   type Folder, type InsertFolder,
   type Note, type InsertNote,
-  type ShareLink, type InsertShareLink,
-  type ProviderConnection, type InsertProviderConnection
+  type ShareLink, type InsertShareLink
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, isNull } from "drizzle-orm";
-import { users, providers, folders, notes, shareLinks, providerConnections } from "@shared/schema";
+import { users, folders, notes, shareLinks } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -18,34 +16,25 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
 
-  // Provider Connections
-  getProviderConnections(userId: string): Promise<ProviderConnection[]>;
-  createProviderConnection(connection: InsertProviderConnection): Promise<ProviderConnection>;
-  updateProviderConnection(id: string, updates: Partial<ProviderConnection>): Promise<ProviderConnection>;
-  deleteProviderConnection(id: string): Promise<void>;
-
-  // Providers
-  getProviders(): Promise<Provider[]>;
-  getProvider(id: string): Promise<Provider | undefined>;
-  createProvider(provider: InsertProvider): Promise<Provider>;
-  deleteProvider(id: string): Promise<void>;
-
   // Folders
-  getFolders(providerId?: string): Promise<Folder[]>;
+  getFolders(userId: string): Promise<Folder[]>;
   getFolder(id: string): Promise<Folder | undefined>;
-  getFoldersByParent(parentId: string | null, providerId?: string): Promise<Folder[]>;
+  getFoldersByParent(parentId: string | null, userId: string): Promise<Folder[]>;
   createFolder(folder: InsertFolder): Promise<Folder>;
   updateFolder(id: string, updates: Partial<Folder>): Promise<Folder>;
   deleteFolder(id: string): Promise<void>;
 
   // Notes
-  getNotes(folderId?: string, providerId?: string): Promise<Note[]>;
+  getNotes(folderId?: string, userId?: string): Promise<Note[]>;
   getNote(id: string): Promise<Note | undefined>;
   getNotesByParent(parentId: string | null): Promise<Note[]>;
-  searchNotes(query: string, filters?: { providerId?: string; folderId?: string; locked?: boolean }): Promise<Note[]>;
+  searchNotes(query: string, filters?: { userId?: string; folderId?: string; locked?: boolean }): Promise<Note[]>;
   createNote(note: InsertNote): Promise<Note>;
   updateNote(id: string, updates: Partial<Note>): Promise<Note>;
   deleteNote(id: string): Promise<void>;
+
+  // Utility methods
+  calculateNoteLevel(parentId: string | null): Promise<number>;
 
   // Share Links
   getShareLink(id: string): Promise<ShareLink | undefined>;
@@ -57,38 +46,23 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  constructor() {
-    // Database storage - no initialization needed
-  }
-
-  // Helper method to calculate note hierarchy level
-  private async calculateNoteLevel(parentId: string | null): Promise<number> {
-    if (!parentId) return 0;
-    
-    const parent = await this.getNote(parentId);
-    if (!parent) return 0;
-    
-    return (parent.level || 0) + 1;
-  }
-
-
   // Users
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, username));
-    return user || undefined;
+    return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db
       .insert(users)
-      .values(insertUser)
+      .values(user)
       .returning();
-    return user;
+    return newUser;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -106,60 +80,9 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Provider Connections
-  async getProviderConnections(userId: string): Promise<ProviderConnection[]> {
-    return await db.select().from(providerConnections).where(eq(providerConnections.userId, userId));
-  }
-
-  async createProviderConnection(connection: InsertProviderConnection): Promise<ProviderConnection> {
-    const [newConnection] = await db
-      .insert(providerConnections)
-      .values(connection)
-      .returning();
-    return newConnection;
-  }
-
-  async updateProviderConnection(id: string, updates: Partial<ProviderConnection>): Promise<ProviderConnection> {
-    const [updated] = await db
-      .update(providerConnections)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(providerConnections.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteProviderConnection(id: string): Promise<void> {
-    await db.delete(providerConnections).where(eq(providerConnections.id, id));
-  }
-
-  // Providers
-  async getProviders(): Promise<Provider[]> {
-    return await db.select().from(providers);
-  }
-
-  async getProvider(id: string): Promise<Provider | undefined> {
-    const [provider] = await db.select().from(providers).where(eq(providers.id, id));
-    return provider || undefined;
-  }
-
-  async createProvider(insertProvider: InsertProvider): Promise<Provider> {
-    const [provider] = await db
-      .insert(providers)
-      .values(insertProvider)
-      .returning();
-    return provider;
-  }
-
-  async deleteProvider(id: string): Promise<void> {
-    await db.delete(providers).where(eq(providers.id, id));
-  }
-
   // Folders
-  async getFolders(providerId?: string): Promise<Folder[]> {
-    if (providerId) {
-      return await db.select().from(folders).where(eq(folders.providerId, providerId));
-    }
-    return await db.select().from(folders);
+  async getFolders(userId: string): Promise<Folder[]> {
+    return await db.select().from(folders).where(eq(folders.userId, userId));
   }
 
   async getFolder(id: string): Promise<Folder | undefined> {
@@ -167,7 +90,7 @@ export class DatabaseStorage implements IStorage {
     return folder || undefined;
   }
 
-  async getFoldersByParent(parentId: string | null, providerId?: string): Promise<Folder[]> {
+  async getFoldersByParent(parentId: string | null, userId: string): Promise<Folder[]> {
     let baseQuery = db.select().from(folders);
     
     if (parentId === null) {
@@ -176,9 +99,7 @@ export class DatabaseStorage implements IStorage {
       baseQuery = baseQuery.where(eq(folders.parentId, parentId));
     }
     
-    if (providerId) {
-      baseQuery = baseQuery.where(eq(folders.providerId, providerId));
-    }
+    baseQuery = baseQuery.where(eq(folders.userId, userId));
     
     return await baseQuery;
   }
@@ -223,15 +144,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Notes
-  async getNotes(folderId?: string, providerId?: string): Promise<Note[]> {
+  async getNotes(folderId?: string, userId?: string): Promise<Note[]> {
     let baseQuery = db.select().from(notes);
     
     if (folderId) {
       baseQuery = baseQuery.where(eq(notes.folderId, folderId));
     }
     
-    if (providerId) {
-      baseQuery = baseQuery.where(eq(notes.providerId, providerId));
+    if (userId) {
+      baseQuery = baseQuery.where(eq(notes.userId, userId));
     }
     
     const result = await baseQuery;
@@ -251,7 +172,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async searchNotes(query: string, filters?: { providerId?: string; folderId?: string; locked?: boolean }): Promise<Note[]> {
+  async searchNotes(query: string, filters?: { userId?: string; folderId?: string; locked?: boolean }): Promise<Note[]> {
     const lowerQuery = query.toLowerCase();
     let baseQuery = db.select().from(notes);
     
@@ -260,8 +181,8 @@ export class DatabaseStorage implements IStorage {
       sql`LOWER(${notes.title}) LIKE ${`%${lowerQuery}%`} OR LOWER(${notes.plainContent}) LIKE ${`%${lowerQuery}%`}`
     );
 
-    if (filters?.providerId) {
-      baseQuery = baseQuery.where(eq(notes.providerId, filters.providerId));
+    if (filters?.userId) {
+      baseQuery = baseQuery.where(eq(notes.userId, filters.userId));
     }
 
     if (filters?.folderId) {
@@ -354,6 +275,13 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error deleting note ${id}:`, error);
       throw new Error(`Failed to delete note: ${error}`);
     }
+  }
+
+  async calculateNoteLevel(parentId: string | null): Promise<number> {
+    if (!parentId) return 0;
+    
+    const [parent] = await db.select().from(notes).where(eq(notes.id, parentId));
+    return parent ? (parent.level || 0) + 1 : 0;
   }
 
   // Share Links

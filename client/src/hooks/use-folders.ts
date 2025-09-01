@@ -1,24 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { Provider, Folder, InsertFolder } from "@shared/schema";
+import type { Folder, InsertFolder } from "@shared/schema";
 
-export function useProviders() {
+export function useFolders(parentId?: string | null) {
   return useQuery({
-    queryKey: ['/api/providers'],
-    queryFn: async () => {
-      const response = await fetch('/api/providers');
-      if (!response.ok) throw new Error('Failed to fetch providers');
-      return response.json() as Promise<Provider[]>;
-    },
-  });
-}
-
-export function useFolders(providerId?: string, parentId?: string | null) {
-  return useQuery({
-    queryKey: ['/api/folders', { providerId, parentId }],
+    queryKey: ['/api/folders', { parentId }],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (providerId) params.set('providerId', providerId);
       if (parentId !== undefined) params.set('parentId', parentId || 'null');
       
       const response = await fetch(`/api/folders?${params.toString()}`);
@@ -61,7 +49,8 @@ export function useDeleteFolder() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/folders/${id}`);
+      const response = await apiRequest('DELETE', `/api/folders/${id}`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/folders'] });

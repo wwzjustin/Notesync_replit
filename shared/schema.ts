@@ -4,55 +4,6 @@ import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index } fro
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const providers = pgTable("providers", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(), // "iCloud", "Google", "Exchange"
-  type: text("type").notNull(),
-  userId: varchar("user_id"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const folders = pgTable("folders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  providerId: varchar("provider_id").references(() => providers.id),
-  parentId: varchar("parent_id").references(() => folders.id),
-  path: text("path").notNull(), // For hierarchical queries
-  level: integer("level").default(0),
-  noteCount: integer("note_count").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const notes = pgTable("notes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  content: jsonb("content"), // Rich text content as JSON
-  plainContent: text("plain_content"), // For search
-  folderId: varchar("folder_id").references(() => folders.id),
-  providerId: varchar("provider_id").references(() => providers.id),
-  parentId: varchar("parent_id").references(() => notes.id),
-  level: integer("level").default(0),
-  isLocked: boolean("is_locked").default(false),
-  wordCount: integer("word_count").default(0),
-  characterCount: integer("character_count").default(0),
-  hasAttachments: boolean("has_attachments").default(false),
-  tags: text("tags").array(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const shareLinks = pgTable("share_links", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  noteId: varchar("note_id").references(() => notes.id),
-  url: text("url").notNull().unique(),
-  permissions: text("permissions").default("view"), // "view", "edit"
-  expiresAt: timestamp("expires_at"),
-  accessCount: integer("access_count").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -75,26 +26,47 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Provider connections table to link users to external accounts
-export const providerConnections = pgTable("provider_connections", {
+export const folders = pgTable("folders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  providerId: varchar("provider_id").references(() => providers.id).notNull(),
-  externalAccountId: text("external_account_id"), // Account ID from the provider
-  accessToken: text("access_token"), // For API access (encrypted in production)
-  refreshToken: text("refresh_token"), // For token refresh
-  isActive: boolean("is_active").default(true),
-  lastSyncAt: timestamp("last_sync_at"),
+  parentId: varchar("parent_id").references(() => folders.id),
+  path: text("path").notNull(), // For hierarchical queries
+  level: integer("level").default(0),
+  noteCount: integer("note_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Insert schemas
-export const insertProviderSchema = createInsertSchema(providers).omit({
-  id: true,
-  createdAt: true,
+export const notes = pgTable("notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: jsonb("content"), // Rich text content as JSON
+  plainContent: text("plain_content"), // For search
+  folderId: varchar("folder_id").references(() => folders.id),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  parentId: varchar("parent_id").references(() => notes.id),
+  level: integer("level").default(0),
+  isLocked: boolean("is_locked").default(false),
+  wordCount: integer("word_count").default(0),
+  characterCount: integer("character_count").default(0),
+  hasAttachments: boolean("has_attachments").default(false),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const shareLinks = pgTable("share_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  noteId: varchar("note_id").references(() => notes.id),
+  url: text("url").notNull().unique(),
+  permissions: text("permissions").default("view"), // "view", "edit"
+  expiresAt: timestamp("expires_at"),
+  accessCount: integer("access_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas
 export const insertFolderSchema = createInsertSchema(folders).omit({
   id: true,
   createdAt: true,
@@ -122,16 +94,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
-export const insertProviderConnectionSchema = createInsertSchema(providerConnections).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
 // Types
-export type Provider = typeof providers.$inferSelect;
-export type InsertProvider = z.infer<typeof insertProviderSchema>;
-
 export type Folder = typeof folders.$inferSelect;
 export type InsertFolder = z.infer<typeof insertFolderSchema>;
 
@@ -144,6 +107,3 @@ export type InsertShareLink = z.infer<typeof insertShareLinkSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpsertUser = typeof users.$inferInsert;
-
-export type ProviderConnection = typeof providerConnections.$inferSelect;
-export type InsertProviderConnection = z.infer<typeof insertProviderConnectionSchema>;

@@ -17,9 +17,6 @@ import {
   Link,
   Circle
 } from "lucide-react";
-import { Apple } from "lucide-react";
-import { FaGoogle } from "react-icons/fa";
-import { Mail } from "lucide-react";
 import { useUpdateNote } from "@/hooks/use-notes";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -27,27 +24,11 @@ import type { Note } from "@shared/schema";
 
 interface NoteEditorProps {
   note: Note | null;
-  onShare: () => void;
-  onNoteUpdate: (note: Note) => void;
+  onNoteChange: (note: Note) => void;
+  onToggleShare: () => void;
 }
 
-const getProviderInfo = (providerId: string, providerType?: string) => {
-  const type = providerType || providerId.split('-')[1];
-  
-  switch (type) {
-    case 'icloud':
-      return { icon: Apple, name: 'iCloud' };
-    case 'google':
-      return { icon: FaGoogle, name: 'Google' };
-    case 'exchange':
-    case 'outlook':
-      return { icon: Mail, name: 'Exchange' };
-    default:
-      return { icon: Mail, name: 'Unknown' };
-  }
-};
-
-export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
+export function NoteEditor({ note, onNoteChange, onToggleShare }: NoteEditorProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isLocked, setIsLocked] = useState(false);
@@ -85,7 +66,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
               content: content, // In a real app, this would be rich text JSON
             }
           });
-          onNoteUpdate(updatedNote);
+          onNoteChange(updatedNote);
           setLastSaved(new Date());
         } catch (error) {
           console.error('Auto-save failed:', error);
@@ -176,7 +157,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={onShare}
+            onClick={onToggleShare}
             className="text-accent-blue hover:text-blue-400"
             data-testid="button-share"
           >

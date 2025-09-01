@@ -2,20 +2,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { Note, InsertNote } from "@shared/schema";
 
-export function useNotes(folderId?: string | null, providerId?: string | null, search?: string) {
+export function useNotes(folderId?: string | null, search?: string) {
   return useQuery({
-    queryKey: ['/api/notes', folderId, providerId, search],
+    queryKey: ['/api/notes', folderId, search],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (folderId) params.set('folderId', folderId);
-      if (providerId) params.set('providerId', providerId);
       if (search) params.set('search', search);
       
       const response = await fetch(`/api/notes?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch notes');
       return response.json() as Promise<Note[]>;
     },
-    enabled: !!folderId && !!providerId, // Only fetch when both folder and provider are selected
+    enabled: !!folderId, // Only fetch when folder is selected
   });
 }
 
