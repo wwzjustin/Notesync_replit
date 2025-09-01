@@ -1,0 +1,170 @@
+1. App Overview
+What kind of app?
+"We're building a desktop note-taking application called NoteSync that replicates Apple Notes functionality with multi-provider sync capabilities. There should be user authorization through iCloud, Google, or Exchange. Users should be able to create new folders and organize different folders under different email accounts such as iCloud or Google. Within each folder, users can create individual notes. Notes should have basic features like font customization, inserting lists, tables, pictures, links, and the ability to lock or unlock notes. Users should be able to share notes to external services like Mail, AirDrop, Messages, or generate a shareable link. There should also be a search function to find different notes across the app. Notes can be viewed in grid, gallery, or list formats. Users should be able to create nested notes, meaning notes underneath other notes, establishing parent and child relationships. There should be no limit to how many layers of nesting can be created."
+2. List of Pages
+
+Welcome/Auth Page
+Main Dashboard (Three-pane Layout)
+Note Editor Page
+Settings/Preferences Page
+Search Results Page
+Share Modal/Dialog
+
+3. Functionality per Page
+Welcome/Auth Page:
+
+Provider selection buttons for iCloud, Google, and Exchange
+Simple authentication flow with mock login (username/password for demo)
+"Continue as Guest" option for immediate access
+Clean welcome screen with NoteSync branding
+
+Main Dashboard (Three-pane Layout):
+
+Left Sidebar: Provider accounts with expandable folder hierarchies
+Middle Pane: Note list with view toggle (grid/gallery/list)
+Right Pane: Note editor/preview area
+Top Search Bar: Global search across all notes
+Sidebar Features:
+
+Account sections (iCloud, Google, Exchange) with note counts
+Create New Folder button for each account
+Drag and drop folder organization
+Nested folder structure with unlimited depth
+Folder context menu (rename, delete, move)
+
+
+
+Note List (Middle Pane):
+
+Three view modes: Grid (3x3 cards), Gallery (2x2 with previews), List (vertical)
+Each note shows: title, preview text, last modified date, provider icon
+Create New Note button at top
+Sort options: Date modified, Date created, Title, Provider
+Note context menu: Share, Lock/Unlock, Move to folder, Delete
+Nested note indicators showing parent-child relationships
+Indent levels to show note hierarchy visually
+
+Note Editor (Right Pane):
+
+Rich text editor with toolbar
+Font customization: Family, size, color, bold, italic, underline
+Insert options: Bulleted lists, numbered lists, tables, images, links
+Note metadata: Creation date, modification date, word count
+Lock/Unlock toggle for protected notes
+Auto-save indicator
+Full-screen edit mode toggle
+Note hierarchy controls: Make child note, promote to parent, move up/down
+
+Search Results Page:
+
+Global search results across all providers and folders
+Filter by: Provider, folder, date range, locked status
+Search within: Title, content, or both
+Highlighted search terms in results
+Quick actions: Open, share, move to folder
+
+Share Modal/Dialog:
+
+Share options: Generate link, copy to clipboard, export as PDF/HTML
+Mock integrations: Mail, Messages, AirDrop (show success messages)
+Permission settings: View only, edit access
+Expiration settings for shared links
+
+4. Database Requirements
+Users
+
+Provider accounts (iCloud, Google, Exchange)
+Authentication tokens (mock data)
+Preferences and settings
+
+Folders
+
+Hierarchical structure with parent-child relationships
+Provider association
+Custom names and metadata
+Unlimited nesting depth
+
+Notes
+
+Rich content with formatting
+Parent-child note relationships
+Provider and folder associations
+Lock status and metadata
+Creation and modification timestamps
+Search indexing
+
+Share Links
+
+Generated URLs with permissions
+Expiration dates
+Access tracking
+
+5. Aesthetic & Visual Preferences
+
+Mimic the UI of the provided screenshot (Apple Notes dark theme)
+Typeface: SF Pro Display (fallback to Inter)
+Dark theme primary with light theme toggle option
+Colors: Dark gray (#1C1C1E) sidebar, medium gray (#2C2C2E) middle pane, black (#000000) note editor
+Accent color: Blue (#007AFF) for selections and buttons
+Text colors: White primary, gray secondary (#8E8E93)
+
+Rounded UI elements:
+
+Folder items slightly rounded (4px radius)
+Note cards moderately rounded (8px radius)
+Buttons fully rounded (pill style)
+Modals rounded corners (12px radius)
+
+Layout specifics:
+
+Three-pane layout: 240px sidebar, 320px note list, remaining space for editor
+Sidebar collapsible to 60px icon-only mode
+Resizable panes with drag handles
+Note list responsive to pane width
+
+6. Development Sequence
+
+Start with the three-pane layout structure and navigation
+Implement mock authentication with provider selection
+Build folder hierarchy with create/delete/move operations
+Add note CRUD operations with basic rich text editing
+Implement note nesting and parent-child relationships
+Add search functionality with filtering
+Build view mode toggles (grid/gallery/list)
+Implement rich text features (fonts, lists, tables, images)
+Add sharing modal with mock integrations
+Connect local storage/IndexedDB for persistence
+Wait to implement real provider sync and authentication APIs later
+
+7. UI Details for First Pages
+Welcome Screen:
+
+Full-screen centered layout with NoteSync logo
+Three provider buttons in horizontal row: iCloud, Google, Exchange
+Each button shows provider icon + "Sign in with [Provider]"
+"Continue as Guest" link below buttons
+Subtle background pattern or gradient
+Smooth fade-in animation on load
+
+Main Dashboard Initial State:
+
+Left sidebar shows "No accounts connected" if guest mode
+Mock provider accounts with sample folders if authenticated
+Empty note list with "Create your first note" prompt
+Welcome message in note editor: "Select a note to begin editing"
+Keyboard shortcuts overlay (Cmd+N for new note, Cmd+F for search)
+
+Note Hierarchy Visualization:
+
+Indentation levels with connecting lines
+Expand/collapse arrows for parent notes with children
+Drag handles for reordering and moving notes between levels
+Visual depth indicators with subtle background color changes
+Maximum 10 nesting levels for UI performance (no backend limit)
+
+Responsive Behavior:
+
+Minimum window size: 1024x768
+Collapsible sidebar on smaller screens
+Note editor can go full-screen on mobile-sized windows
+Touch-friendly drag and drop with larger hit targets
