@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(240, 10%, 11%);
+  --foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 17%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --popover: hsl(240, 10%, 17%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --primary: hsl(212, 100%, 50%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(240, 8%, 24%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 8%, 24%);
+  --muted-foreground: hsl(240, 5%, 58%);
+  --accent: hsl(212, 100%, 50%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --destructive: hsl(0, 62%, 59%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 6%, 23%);
+  --input: hsl(240, 6%, 23%);
+  --ring: hsl(212, 100%, 50%);
+  --chart-1: hsl(212, 100%, 50%);
+  --chart-2: hsl(159, 100%, 36%);
+  --chart-3: hsl(42, 93%, 56%);
+  --chart-4: hsl(147, 79%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar: hsl(240, 10%, 17%);
+  --sidebar-foreground: hsl(0, 0%, 85%);
+  --sidebar-primary: hsl(212, 100%, 50%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(240, 8%, 24%);
+  --sidebar-accent-foreground: hsl(212, 100%, 50%);
+  --sidebar-border: hsl(240, 6%, 23%);
+  --sidebar-ring: hsl(212, 100%, 50%);
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.75rem;
+  
+  /* Apple Notes specific colors */
+  --sidebar-bg: hsl(225, 7%, 11%);
+  --middle-pane-bg: hsl(227, 6%, 17%);
+  --editor-bg: hsl(0, 0%, 0%);
+  --accent-blue: hsl(212, 100%, 50%);
+  --text-secondary: hsl(240, 5%, 58%);
+  --separator: hsl(240, 6%, 23%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 11%);
+  --foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 17%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --popover: hsl(240, 10%, 17%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --primary: hsl(212, 100%, 50%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(240, 8%, 24%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 8%, 24%);
+  --muted-foreground: hsl(240, 5%, 58%);
+  --accent: hsl(212, 100%, 50%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --destructive: hsl(0, 62%, 59%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 6%, 23%);
+  --input: hsl(240, 6%, 23%);
+  --ring: hsl(212, 100%, 50%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* Apple Notes specific styles */
+.sidebar-bg {
+  background-color: var(--sidebar-bg);
+}
+
+.middle-pane-bg {
+  background-color: var(--middle-pane-bg);
+}
+
+.editor-bg {
+  background-color: var(--editor-bg);
+}
+
+.accent-blue {
+  color: var(--accent-blue);
+}
+
+.bg-accent-blue {
+  background-color: var(--accent-blue);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.border-separator {
+  border-color: var(--separator);
+}
+
+.resize-handle {
+  background: linear-gradient(90deg, transparent 40%, var(--separator) 50%, transparent 60%);
+  cursor: col-resize;
+}
+
+.folder-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.note-item:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.rich-editor {
+  min-height: 400px;
+  outline: none;
+}
+
+.toolbar-button {
+  transition: all 0.2s ease;
+}
+
+.toolbar-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.note-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
