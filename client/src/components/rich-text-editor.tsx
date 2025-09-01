@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
+export interface RichTextEditorRef {
+  handleFormat: (command: string, value?: string) => void;
+}
+
 interface RichTextEditorProps {
   title: string;
   content: string;
@@ -24,8 +28,8 @@ export function RichTextEditor({
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (contentRef.current && content !== contentRef.current.innerText) {
-      contentRef.current.innerText = content;
+    if (contentRef.current && content !== contentRef.current.innerHTML) {
+      contentRef.current.innerHTML = content;
     }
   }, [content]);
 
@@ -35,8 +39,16 @@ export function RichTextEditor({
 
   const handleContentChange = () => {
     if (contentRef.current) {
-      onContentChange(contentRef.current.innerText || '');
+      onContentChange(contentRef.current.innerHTML || '');
     }
+  };
+
+  const handleFormat = (command: string, value?: string) => {
+    if (isLocked || !contentRef.current) return;
+    
+    contentRef.current.focus();
+    document.execCommand(command, false, value);
+    handleContentChange();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

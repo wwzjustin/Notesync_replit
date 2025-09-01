@@ -124,10 +124,25 @@ export function NoteList({
     }
   };
 
+  const sortNotes = (notes: Note[], sortBy: string): Note[] => {
+    const sorted = [...notes];
+    
+    switch (sortBy) {
+      case 'dateCreated':
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      case 'title':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case 'dateModified':
+      default:
+        return sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }
+  };
+
   const groupNotesByDate = (notes: Note[]) => {
+    const sortedNotes = sortNotes(notes, sortBy);
     const groups: { [key: string]: Note[] } = {};
     
-    notes.forEach(note => {
+    sortedNotes.forEach(note => {
       const noteDate = typeof note.updatedAt === 'string' ? new Date(note.updatedAt) : note.updatedAt;
       const now = new Date();
       const diffMs = now.getTime() - noteDate.getTime();
@@ -159,12 +174,27 @@ export function NoteList({
   const getNoteGridClass = () => {
     switch (viewMode) {
       case 'grid':
-        return 'grid grid-cols-2 gap-2';
+        return 'grid grid-cols-2 gap-4';
       case 'gallery':
         return 'grid grid-cols-1 gap-3';
       case 'list':
       default:
         return 'space-y-2';
+    }
+  };
+
+  const getNoteCardClass = (note: Note) => {
+    const baseClass = "note-item cursor-pointer rounded-lg border transition-all duration-200";
+    const selectedClass = selectedNote?.id === note.id
+      ? "bg-accent-blue bg-opacity-20 border-accent-blue border-opacity-50"
+      : "hover:bg-gray-700 hover:bg-opacity-30 border-gray-600";
+    
+    if (viewMode === 'grid') {
+      return `${baseClass} ${selectedClass} p-4 h-32 flex flex-col justify-between`;
+    } else if (viewMode === 'gallery') {
+      return `${baseClass} ${selectedClass} p-4 h-24`;
+    } else {
+      return `${baseClass} ${selectedClass} p-3`;
     }
   };
 
@@ -206,7 +236,6 @@ export function NoteList({
                 <SelectItem value="dateModified">Date Modified</SelectItem>
                 <SelectItem value="dateCreated">Date Created</SelectItem>
                 <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="provider">Provider</SelectItem>
               </SelectContent>
             </Select>
             <span className="text-secondary">{notes.length} notes</span>
@@ -225,13 +254,19 @@ export function NoteList({
                 {groupNotes.map((note) => (
                   <div
                     key={note.id}
-                    className={cn(
-                      "note-item p-3 rounded-lg cursor-pointer",
-                      selectedNote?.id === note.id
-                        ? "bg-accent-blue bg-opacity-20 border border-accent-blue border-opacity-30"
-                        : "hover:bg-gray-700 hover:bg-opacity-30"
-                    )}
+                    className={getNoteCardClass(note)}
                     onClick={() => onNoteSelect(note)}
+                    draggable={true}
+                    onDragStart={(e) => e.dataTransfer.setData('text/plain', note.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedNoteId = e.dataTransfer.getData('text/plain');
+                      if (draggedNoteId !== note.id) {
+                        // TODO: Implement parent-child relationship
+                        console.log(`Making note ${draggedNoteId} a child of ${note.id}`);
+                      }
+                    }}
                     data-testid={`note-${note.id}`}
                   >
                     <div className="flex items-start justify-between mb-2">

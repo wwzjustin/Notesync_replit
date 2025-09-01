@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCreateShareLink } from "@/hooks/use-share-links";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,15 +14,42 @@ interface ShareModalProps {
 
 export function ShareModal({ note, onClose }: ShareModalProps) {
   const [expiresIn, setExpiresIn] = useState('never');
+  const [shareLink, setShareLink] = useState<string>('');
   const { toast } = useToast();
+  const createShareLinkMutation = useCreateShareLink();
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/shared/${note.id}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link copied",
-      description: "Share link copied to clipboard",
-    });
+  const handleCopyLink = async () => {
+    try {
+      if (!shareLink) {
+        // Create share link if it doesn't exist
+        const expirationDate = expiresIn === 'never' ? null : 
+          expiresIn === '1day' ? new Date(Date.now() + 24 * 60 * 60 * 1000) :
+          expiresIn === '1week' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) :
+          expiresIn === '1month' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
+        
+        const linkData = await createShareLinkMutation.mutateAsync({
+          noteId: note.id,
+          url: `${window.location.origin}/shared/${note.id}/${Math.random().toString(36).substring(7)}`,
+          permissions: 'view',
+          expiresAt: expirationDate,
+        });
+        setShareLink(linkData.url);
+        await navigator.clipboard.writeText(linkData.url);
+      } else {
+        await navigator.clipboard.writeText(shareLink);
+      }
+      
+      toast({
+        title: "Link copied",
+        description: "Share link copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create share link",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSendEmail = () => {

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { RichTextEditor, type RichTextEditorRef } from "@/components/rich-text-editor";
 import { 
   Lock, 
   Unlock, 
@@ -46,6 +46,7 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
   const [selectedFontSize, setSelectedFontSize] = useState('14px');
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const updateNoteMutation = useUpdateNote();
   const { toast } = useToast();
@@ -219,13 +220,40 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
         <div className="h-6 w-px bg-separator" />
         
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="sm" className="toolbar-button p-2 text-white hover:bg-gray-700">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="toolbar-button p-2 text-white hover:bg-gray-700"
+            onClick={() => {
+              if (editorRef.current && (editorRef.current as any).formatHandler) {
+                (editorRef.current as any).formatHandler('bold');
+              }
+            }}
+          >
             <Bold className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="toolbar-button p-2 text-white hover:bg-gray-700">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="toolbar-button p-2 text-white hover:bg-gray-700"
+            onClick={() => {
+              if (editorRef.current && (editorRef.current as any).formatHandler) {
+                (editorRef.current as any).formatHandler('italic');
+              }
+            }}
+          >
             <Italic className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="toolbar-button p-2 text-white hover:bg-gray-700">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="toolbar-button p-2 text-white hover:bg-gray-700"
+            onClick={() => {
+              if (editorRef.current && (editorRef.current as any).formatHandler) {
+                (editorRef.current as any).formatHandler('underline');
+              }
+            }}
+          >
             <Underline className="h-4 w-4" />
           </Button>
         </div>
@@ -233,13 +261,41 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
         <div className="h-6 w-px bg-separator" />
         
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="sm" className="toolbar-button p-2 text-white hover:bg-gray-700">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="toolbar-button p-2 text-white hover:bg-gray-700"
+            onClick={() => {
+              if (editorRef.current && (editorRef.current as any).formatHandler) {
+                (editorRef.current as any).formatHandler('insertUnorderedList');
+              }
+            }}
+          >
             <List className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="toolbar-button p-2 text-white hover:bg-gray-700">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="toolbar-button p-2 text-white hover:bg-gray-700"
+            onClick={() => {
+              if (editorRef.current && (editorRef.current as any).formatHandler) {
+                (editorRef.current as any).formatHandler('insertOrderedList');
+              }
+            }}
+          >
             <ListOrdered className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" className="toolbar-button p-2 text-white hover:bg-gray-700">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="toolbar-button p-2 text-white hover:bg-gray-700"
+            onClick={() => {
+              const url = prompt('Enter link URL:');
+              if (url && editorRef.current && (editorRef.current as any).formatHandler) {
+                (editorRef.current as any).formatHandler('createLink', url);
+              }
+            }}
+          >
             <Table className="h-4 w-4" />
           </Button>
         </div>
@@ -258,15 +314,17 @@ export function NoteEditor({ note, onShare, onNoteUpdate }: NoteEditorProps) {
       
       {/* Editor Content */}
       <div className="flex-1 p-6 overflow-y-auto">
-        <RichTextEditor
-          title={title}
-          content={content}
-          onTitleChange={setTitle}
-          onContentChange={setContent}
-          isLocked={isLocked}
-          selectedFont={selectedFont}
-          selectedFontSize={selectedFontSize}
-        />
+        <div ref={editorRef}>
+          <RichTextEditor
+            title={title}
+            content={content}
+            onTitleChange={setTitle}
+            onContentChange={setContent}
+            isLocked={isLocked}
+            selectedFont={selectedFont}
+            selectedFontSize={selectedFontSize}
+          />
+        </div>
       </div>
       
       {/* Editor Footer */}
