@@ -77,7 +77,7 @@ export function NoteEditor({ note, onNoteChange, onToggleShare }: NoteEditorProp
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [title, content, note, updateNoteMutation, onNoteUpdate]);
+  }, [title, content, note, updateNoteMutation, onNoteChange]);
 
   const toggleLock = async () => {
     if (!note) return;
@@ -88,7 +88,7 @@ export function NoteEditor({ note, onNoteChange, onToggleShare }: NoteEditorProp
         updates: { isLocked: !isLocked }
       });
       setIsLocked(!isLocked);
-      onNoteUpdate(updatedNote);
+      onNoteChange(updatedNote);
       toast({
         title: isLocked ? "Note unlocked" : "Note locked",
         description: isLocked ? "Note is now editable" : "Note is now protected",
@@ -126,8 +126,6 @@ export function NoteEditor({ note, onNoteChange, onToggleShare }: NoteEditorProp
     );
   }
 
-  const providerInfo = getProviderInfo(note.providerId || '');
-  const ProviderIcon = providerInfo.icon;
 
   return (
     <div className={cn("flex-1 editor-bg flex flex-col", isFullscreen && "fixed inset-0 z-50")}>
@@ -322,8 +320,7 @@ export function NoteEditor({ note, onNoteChange, onToggleShare }: NoteEditorProp
           <span data-testid="text-character-count">{note.characterCount || 0} characters</span>
         </div>
         <div className="flex items-center space-x-2">
-          <ProviderIcon className="h-3 w-3 text-accent-blue" />
-          <span>{providerInfo.name} • Notes</span>
+          <span>Personal Notes</span>
         </div>
       </div>
     </div>
