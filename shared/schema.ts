@@ -30,7 +30,7 @@ export const folders = pgTable("folders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  parentId: varchar("parent_id").references(() => folders.id),
+  parentId: varchar("parent_id"),
   path: text("path").notNull(), // For hierarchical queries
   level: integer("level").default(0),
   noteCount: integer("note_count").default(0),
@@ -45,7 +45,7 @@ export const notes = pgTable("notes", {
   plainContent: text("plain_content"), // For search
   folderId: varchar("folder_id").references(() => folders.id),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  parentId: varchar("parent_id").references(() => notes.id),
+  parentId: varchar("parent_id"),
   level: integer("level").default(0),
   isLocked: boolean("is_locked").default(false),
   wordCount: integer("word_count").default(0),
@@ -103,6 +103,49 @@ export type InsertNote = z.infer<typeof insertNoteSchema>;
 
 export type ShareLink = typeof shareLinks.$inferSelect;
 export type InsertShareLink = z.infer<typeof insertShareLinkSchema>;
+
+// Relations
+export const foldersRelations = relations(folders, ({ one, many }) => ({
+  user: one(users, {
+    fields: [folders.userId],
+    references: [users.id],
+  }),
+  parent: one(folders, {
+    fields: [folders.parentId],
+    references: [folders.id],
+  }),
+  children: many(folders),
+  notes: many(notes),
+}));
+
+export const notesRelations = relations(notes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [notes.userId],
+    references: [users.id],
+  }),
+  folder: one(folders, {
+    fields: [notes.folderId],
+    references: [folders.id],
+  }),
+  parent: one(notes, {
+    fields: [notes.parentId],
+    references: [notes.id],
+  }),
+  children: many(notes),
+  shareLinks: many(shareLinks),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  folders: many(folders),
+  notes: many(notes),
+}));
+
+export const shareLinksRelations = relations(shareLinks, ({ one }) => ({
+  note: one(notes, {
+    fields: [shareLinks.noteId],
+    references: [notes.id],
+  }),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
